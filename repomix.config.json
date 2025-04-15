@@ -1,0 +1,22 @@
+{
+  "output": {
+    "style": "markdown",
+    "filePath": ".repomix/bwr-plots-codebase.txt",
+    "removeComments": true,
+    "showLineNumbers": true,
+    "topFilesLength": 10
+  },
+  "ignore": {
+    "customPatterns": [
+      ".cursor",
+      ".notes",
+      ".repomix",
+      "bwr-brand_graphics",
+      "output",
+      "ref",
+      "resources",
+      ".env",
+      "repomix.config.json"
+    ]
+  }
+}
