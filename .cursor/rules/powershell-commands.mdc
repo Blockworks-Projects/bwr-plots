@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Powershell Commands
+- Always use powershell when running commands in Agent mode

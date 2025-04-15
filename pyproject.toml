@@ -1,0 +1,23 @@
+[project]
+name = "bwr-plots"
+version = "0.1.0"
+description = "Blockworks Research Plotting Library"
+authors = [
+    {name = "Daniel",email = "dan.shapiro47@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0.0",
+    "plotly>=5.10.0",
+    "numpy>=1.20.0",
+    "kaleido==0.2.1"
+]
+
+[tool.poetry]
+packages = [{include = "bwr_plots", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
