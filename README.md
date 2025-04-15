@@ -16,7 +16,7 @@ A Python package for creating Blockworks Research branded plots and visualizatio
 - Automatic data scaling (K, M, B)
 - Date alignment utilities
 - Watermark support (SVG, configurable path)
-- Image saving capabilities (default output: `./output/`)
+- HTML file saving capabilities (default output: `./output/`)
 
 ## Installation
 
@@ -50,7 +50,7 @@ fig = plotter.scatter_plot(
     title="My Chart Title",
     subtitle="My Subtitle",
     source="Source: Example Data",
-    save_image=True  # Saved to ./output/ by default
+    save_image=True  # Saved to ./output/ as an HTML file by default
 )
 
 # Other chart types
@@ -82,9 +82,10 @@ plotter = BWRPlots(config=custom_config)
 
 **Note:**
 - The default watermark is loaded from `brand-assets/bwr_white.svg` (relative to the project root). If you move the brand-assets folder, update the config accordingly.
-- Output images are saved to the `./output/` directory by default if `save_path` is not provided.
+- Output plots are saved to the `./output/` directory by default if `save_path` is not provided.
 - For best appearance, install the Maison Neue and Inter fonts on your system.
 - All plotting methods accept an `open_in_browser` parameter (default: True) to control whether the plot is displayed interactively.
+- Setting `save_image=True` in any plotting method will save the plot as a standalone .html file in the specified save_path (or the ./output/ directory by default).
 
 ## Examples
 
@@ -96,7 +97,6 @@ See the `examples` directory for more detailed usage examples.
 - pandas
 - plotly
 - numpy
-- kaleido (for saving images)
 
 ## License
 

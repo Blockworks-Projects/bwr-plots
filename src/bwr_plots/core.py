@@ -7,6 +7,8 @@ import copy
 import numpy as np
 from pathlib import Path
 import re
+import datetime
+import time
 
 from typing import Dict, List, Optional, Union, Tuple, Any
 
@@ -16,7 +18,6 @@ from .utils import (
     deep_merge_dicts,
     _generate_filename_from_title,
     _get_scale_and_suffix,
-    round_and_align_dates,
 )
 
 # Import chart functions for each plot type
@@ -27,6 +28,182 @@ from .charts.horizontal_bar import _add_horizontal_bar_traces
 from .charts.multi_bar import _add_multi_bar_traces
 from .charts.stacked_bar import _add_stacked_bar_traces
 from .charts.table import _add_table_trace
+
+
+# Utility function to generate safe filenames from titles
+def _generate_filename_from_title(title: str) -> str:
+    """
+    Generate a safe filename from a plot title.
+
+    Args:
+        title: The plot title to convert
+
+    Returns:
+        A filename-safe string based on the title
+    """
+    if not title:
+        return f"plot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Replace spaces and special characters with underscores
+    safe_name = re.sub(r"[^\w\s-]", "", title).strip().lower()
+    safe_name = re.sub(r"[-\s]+", "_", safe_name)
+
+    # Add timestamp for uniqueness
+    return f"{safe_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+
+def save_plot_image(
+    fig: go.Figure,
+    title: str,
+    save_path: Optional[str] = None,
+) -> Tuple[bool, str]:
+    """
+    Saves the Plotly figure as an HTML file.
+
+    Args:
+        fig: The Plotly figure object.
+        title: The title of the plot (used for generating filename).
+        save_path: The directory path to save the file. Defaults to './output'.
+
+    Returns:
+        A tuple containing:
+        - bool: True if saving was successful, False otherwise.
+        - str: The absolute path to the saved HTML file or an error message.
+    """
+    print(
+        f"[INFO] save_plot_image: Starting HTML export for title='{title}', save_path='{save_path}'"
+    )
+
+    # Generate filename
+    safe_filename = _generate_filename_from_title(title)
+    output_path = Path(save_path) if save_path else Path.cwd() / "output"
+    output_path.mkdir(parents=True, exist_ok=True)
+    filepath = output_path / f"{safe_filename}.html"  # Explicitly .html extension
+
+    print(f"[INFO] save_plot_image: Attempting to save HTML to: {filepath}")
+
+    try:
+        start_time = time.time()
+        # Use write_html directly
+        fig.write_html(
+            str(filepath),
+            include_plotlyjs="cdn",  # Use CDN to keep file size smaller
+            full_html=True,  # Ensure it's a standalone file
+        )
+        elapsed_time = time.time() - start_time
+        print(
+            f"[INFO] save_plot_image: HTML export completed successfully in {elapsed_time:.2f} seconds."
+        )
+
+        if filepath.exists() and filepath.stat().st_size > 0:
+            abs_path_str = str(filepath.resolve())
+            print(f"[INFO] save_plot_image: Plot saved to: {abs_path_str}")
+            return True, abs_path_str
+        else:
+            # This case should be rare with write_html if no exception occurred
+            error_msg = f"HTML export finished without error, but the output file is missing or empty: {filepath}"
+            print(f"[ERROR] save_plot_image: {error_msg}")
+            return False, error_msg
+
+    except Exception as e:
+        # Catch potential errors during HTML writing (e.g., permissions)
+        error_msg = f"Error saving plot as HTML to {filepath}: {e}"
+        print(f"[ERROR] save_plot_image: {error_msg}")
+        print(f"[ERROR] save_plot_image: Error type: {type(e).__name__}")
+        import traceback
+
+        traceback.print_exc()  # Print full traceback for debugging
+        return False, error_msg
+
+
+def round_and_align_dates(
+    df_list: List[pd.DataFrame],
+    start_date=None,
+    end_date=None,
+    round_freq="D",
+) -> List[pd.DataFrame]:
+    """
+    Rounds dates and aligns multiple DataFrames to the same date range.
+
+    Args:
+        df_list: List of DataFrames to align (must have datetime index or be convertible).
+        start_date: Optional start date (str or datetime) to filter from.
+        end_date: Optional end date (str or datetime) to filter to.
+        round_freq: Frequency to round dates to (e.g., 'D', 'W', 'M').
+
+    Returns:
+        List of aligned DataFrames with rounded, unique, sorted datetime index.
+    """
+    processed_dfs = []
+    min_start = pd.Timestamp.max
+    max_end = pd.Timestamp.min
+
+    for df_orig in df_list:
+        df = df_orig.copy()
+        # Ensure index is datetime
+        if not pd.api.types.is_datetime64_any_dtype(df.index):
+            try:
+                df.index = pd.to_datetime(df.index)
+            except Exception as e:
+                print(
+                    f"Warning: Could not convert index to datetime for a DataFrame: {e}. Skipping alignment for it."
+                )
+                processed_dfs.append(df_orig)
+                continue
+
+        # Round dates
+        try:
+            df.index = df.index.round(round_freq)
+        except Exception as e:
+            print(f"Warning: Could not round index with frequency '{round_freq}': {e}")
+
+        # Remove duplicates after rounding (keep first)
+        df = df[~df.index.duplicated(keep="first")]
+
+        # Sort index
+        df = df.sort_index()
+
+        # Track overall min/max dates *after* processing
+        if not df.empty:
+            min_start = min(min_start, df.index.min())
+            max_end = max(max_end, df.index.max())
+
+        processed_dfs.append(df)
+
+    # Determine final common date range
+    final_start = pd.to_datetime(start_date) if start_date else min_start
+    final_end = pd.to_datetime(end_date) if end_date else max_end
+
+    if (
+        final_start > final_end
+        or final_start is pd.Timestamp.max
+        or final_end is pd.Timestamp.min
+    ):
+        print(
+            "Warning: Could not determine a valid common date range for alignment. Returning processed (rounded/deduplicated) but potentially unaligned DataFrames."
+        )
+        return processed_dfs
+
+    # Create a complete date range for reindexing
+    try:
+        full_date_range = pd.date_range(
+            start=final_start, end=final_end, freq=round_freq
+        )
+    except Exception as e:
+        print(
+            f"Warning: Could not create date range with frequency '{round_freq}': {e}. Returning processed DataFrames without reindexing."
+        )
+        return processed_dfs
+
+    # Reindex all *successfully processed* dataframes to the common range
+    aligned_dfs = []
+    for df in processed_dfs:
+        if pd.api.types.is_datetime64_any_dtype(df.index) and not df.empty:
+            aligned_dfs.append(df.reindex(full_date_range))
+        else:
+            aligned_dfs.append(df)
+
+    return aligned_dfs
 
 
 class BWRPlots:
@@ -711,16 +888,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -822,7 +992,7 @@ class BWRPlots:
                 effective_date = ""
 
         # --- Figure Creation ---
-        fig = go.Figure()
+        fig = make_subplots()
 
         # --- Axis Options ---
         local_axis_options = {} if axis_options is None else axis_options.copy()
@@ -871,16 +1041,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -967,18 +1130,8 @@ class BWRPlots:
         ):
             print("Warning: No data provided for bar chart.")
             # Create an empty figure
-            fig = go.Figure()
+            fig = make_subplots()
         else:
-            # Ensure data index is datetime
-            if not pd.api.types.is_datetime64_any_dtype(plot_data.index):
-                try:
-                    if isinstance(plot_data, pd.DataFrame):
-                        plot_data.index = pd.to_datetime(plot_data.index)
-                    else:  # Series
-                        plot_data.index = pd.to_datetime(plot_data.index)
-                except Exception as e:
-                    print(f"Warning: Could not convert index to datetime: {e}")
-
             # Group data if requested
             if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
                 plot_data.index
@@ -1016,7 +1169,7 @@ class BWRPlots:
                     effective_date = ""
 
             # --- Figure Creation ---
-            fig = go.Figure()
+            fig = make_subplots()
 
             # --- Axis Options & Scaling ---
             local_axis_options = {} if axis_options is None else axis_options.copy()
@@ -1087,16 +1240,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -1189,7 +1335,7 @@ class BWRPlots:
         if data is None or data.empty:
             print("Warning: No data provided for horizontal bar chart.")
             # Create an empty figure
-            fig = go.Figure()
+            fig = make_subplots()
         else:
             # Validate columns exist
             if current_y_column not in data.columns:
@@ -1238,7 +1384,7 @@ class BWRPlots:
             effective_date = date if date is not None else ""
 
             # --- Figure Creation ---
-            fig = go.Figure()
+            fig = make_subplots()
 
             # --- Axis Options & Scaling ---
             local_axis_options = {} if axis_options is None else axis_options.copy()
@@ -1297,16 +1443,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -1392,7 +1531,7 @@ class BWRPlots:
         )
 
         # --- Figure Creation ---
-        fig = go.Figure()
+        fig = make_subplots()
 
         # --- Add Table Trace ---
         _add_table_trace(
@@ -1425,16 +1564,9 @@ class BWRPlots:
 
         # --- Save Table as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Table saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving table to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -1559,7 +1691,7 @@ class BWRPlots:
                 effective_date = ""
 
         # --- Figure Creation ---
-        fig = go.Figure()
+        fig = make_subplots()
 
         # --- Axis Options & Scaling ---
         local_axis_options = {} if axis_options is None else axis_options.copy()
@@ -1630,16 +1762,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
@@ -1764,7 +1889,7 @@ class BWRPlots:
                 effective_date = ""
 
         # --- Figure Creation ---
-        fig = go.Figure()
+        fig = make_subplots()
 
         # --- Axis Options & Scaling ---
         local_axis_options = {} if axis_options is None else axis_options.copy()
@@ -1851,16 +1976,9 @@ class BWRPlots:
 
         # --- Save Plot as PNG (Optional) ---
         if save_image:
-            safe_filename = _generate_filename_from_title(title)
-            output_path = Path(save_path) if save_path else Path.cwd() / "output"
-            output_path.mkdir(parents=True, exist_ok=True)
-            filepath = output_path / f"{safe_filename}.png"
-            try:
-                fig.write_image(str(filepath), scale=2)
-                print(f"Plot saved to: {filepath}")
-            except Exception as e:
-                print(f"Error saving plot to {filepath}: {e}")
-                print("Ensure 'kaleido' is installed (`pip install kaleido`)")
+            success, message = save_plot_image(fig, title, save_path)
+            if not success:
+                print(message)
         if open_in_browser:
             fig.show()
         return fig
