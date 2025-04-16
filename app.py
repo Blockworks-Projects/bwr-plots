@@ -290,7 +290,7 @@ if generate_button and df is not None and plotter is not None:
                         st.error(f"Error setting index column '{index_col}': {e}")
                         st.stop()  # Stop if index setting fails critically
 
-                # --- Argument Assembly ---
+                # --- 1. Prepare Plot Data and Arguments ---
                 # Get the plotting method from the plotter instance
                 plot_function = getattr(plotter, plot_type_key)
 
@@ -308,16 +308,14 @@ if generate_button and df is not None and plotter is not None:
 
                 # Add conditional/specific arguments
                 plot_args.update(column_mappings)  # Add mapped columns if any
-                plot_args.update(
-                    plot_specific_options
-                )  # Add options like sort_ascending
+                plot_args.update(plot_specific_options)  # Add options like sort_ascending
 
                 # --- Plotting ---
                 st.subheader("Generated Plot")
                 fig: go.Figure = plot_function(**plot_args)
 
                 # Display the plot
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=False)
                 st.success("Plot generated successfully!")
 
             except Exception as e:

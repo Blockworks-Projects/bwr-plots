@@ -15,7 +15,7 @@ from bwr_plots import BWRPlots, round_and_align_dates
 DATA_DIR = project_root / "data" / "test_data"
 # Go up one level from 'examples' then into 'output'
 OUTPUT_DIR = project_root / "output"
-CSV_FILE = DATA_DIR / "multi_time_series_test.csv"
+CSV_FILE = DATA_DIR / "single_time_series_test.csv"
 
 # Create output directory if it doesn't exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -32,8 +32,8 @@ try:
 
     df = pd.read_csv(CSV_FILE)
     # Parse dates and set index
-    df["date"] = pd.to_datetime(df["date"], utc=True)
-    df.set_index("date", inplace=True)
+    df["DATE"] = pd.to_datetime(df["DATE"], utc=True)
+    df.set_index("DATE", inplace=True)
     print("Data loaded successfully.")
 except FileNotFoundError as e:
     print(f"Error: {e}. Please ensure the data is in the correct location: {DATA_DIR}")
@@ -43,7 +43,7 @@ except Exception as e:
     exit()
 
 # Optional: Select specific columns if needed
-df_plot = df[["uniswap", "aave"]]  # Plotting only two series for clarity
+df_plot = df[["APY"]]  # Plotting only two series for clarity
 
 
 # --- Check for environment variable to open browser ---

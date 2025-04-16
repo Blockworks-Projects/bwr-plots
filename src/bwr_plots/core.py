@@ -18,6 +18,7 @@ from .config import DEFAULT_BWR_CONFIG
 from .utils import (
     deep_merge_dicts,
     _get_scale_and_suffix,
+    calculate_yaxis_grid_params,
 )
 
 # Import chart functions for each plot type
@@ -406,11 +407,20 @@ class BWRPlots:
             else cfg_layout.get("plot_area_b_padding", 0)
         )
 
+        # Determine if a horizontal legend is being used
+        is_horizontal_legend = show_legend and cfg_legend["orientation"] == "h"
+
         if is_table:
             annot_x = source_x if source_x is not None else cfg_annot["table_source_x"]
             annot_y = source_y if source_y is not None else cfg_annot["table_source_y"]
             annot_xanchor = cfg_annot["table_xanchor"]
             annot_yanchor = cfg_annot["table_yanchor"]
+        elif is_horizontal_legend:
+            # Use config-driven default_source_x for horizontal legend as well
+            annot_x = source_x if source_x is not None else cfg_annot["default_source_x"]
+            annot_y = source_y if source_y is not None else cfg_annot["default_source_y"]
+            annot_xanchor = cfg_annot["xanchor"]
+            annot_yanchor = cfg_annot["yanchor"]
         else:
             annot_x = (
                 source_x if source_x is not None else cfg_annot["default_source_x"]
@@ -543,19 +553,19 @@ class BWRPlots:
             title=dict(
                 text=cfg_axes["x_title_text"], font=self._get_font_dict("axis_title")
             ),
-            linecolor="rgba(0,0,0,0)",
-            tickcolor="rgba(0,0,0,0)",
+            linecolor=cfg_axes["linecolor"],
+            tickcolor=cfg_axes["tickcolor"],
             showgrid=cfg_axes["showgrid_x"],
             gridcolor=cfg_axes["gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
             ticks=cfg_axes["ticks"],
-            tickwidth=0,
+            tickwidth=cfg_axes["tickwidth"],
             nticks=merged_options["x_nticks"],
             tickformat=merged_options["x_tickformat"],
             tickfont=self._get_font_dict("tick"),
-            showline=False,
-            linewidth=0,
-            zeroline=False,
+            showline=False,  # Hide the default x-axis line to prevent duplication with y=0 zeroline
+            linewidth=cfg_axes["linewidth"],
+            zeroline=False,  # Ensure x-axis zeroline is always off
             zerolinewidth=0,
             zerolinecolor="rgba(0,0,0,0)",
             showspikes=cfg_axes["showspikes"],
@@ -565,12 +575,13 @@ class BWRPlots:
             spikemode=cfg_axes["spikemode"],
             showticklabels=True,
             tickmode="auto",
-            ticklen=0,
+            ticklen=cfg_axes.get("x_ticklen", 5),
             range=merged_options["x_range"],
             visible=True,
             color="rgba(0,0,0,0)",
-            position=0,
+            position=0,  # Keep x-axis at the bottom
             fixedrange=True,
+            tickvals=merged_options.get("x_tickvals", None),
         )
 
         fig.update_yaxes(
@@ -588,16 +599,18 @@ class BWRPlots:
             tickformat=merged_options["primary_tickformat"],
             secondary_y=False,
             linecolor=cfg_axes["linecolor"],
-            tickcolor=cfg_axes["tickcolor"],
-            ticks=cfg_axes["ticks"],
-            tickwidth=cfg_axes["tickwidth"],
-            showline=False,
+            tickcolor="rgba(0,0,0,0)",
+            ticks="",  # Explicitly remove tick marks for cleaner look
+            tickwidth=0,
+            showline=False,  # Hide the vertical y-axis line for cleaner look
             linewidth=cfg_axes["linewidth"],
-            zeroline=cfg_axes["zeroline"],
+            zeroline=True,  # Ensure zeroline is True (it's the visual x-axis now)
             zerolinewidth=cfg_axes["zerolinewidth"],
             zerolinecolor=cfg_axes["zerolinecolor"],
             showticklabels=True,
-            tickmode="auto",
+            tickmode=merged_options.get("primary_tickmode", "auto"),
+            tick0=merged_options.get("primary_tick0", None),
+            dtick=merged_options.get("primary_dtick", None),
             ticklen=0,
             fixedrange=True,
         )
@@ -618,12 +631,12 @@ class BWRPlots:
                 tickformat=merged_options["secondary_tickformat"],
                 secondary_y=True,
                 linecolor=cfg_axes["linecolor"],
-                tickcolor=cfg_axes["tickcolor"],
-                ticks=cfg_axes["ticks"],
-                tickwidth=cfg_axes["tickwidth"],
-                showline=False,
+                tickcolor="rgba(0,0,0,0)",
+                ticks="",
+                tickwidth=0,
+                showline=False,  # Hide the vertical secondary y-axis line
                 linewidth=cfg_axes["linewidth"],
-                zeroline=cfg_axes["zeroline"],
+                zeroline=False,  # Ensure secondary zeroline is off by default
                 zerolinewidth=cfg_axes["zerolinewidth"],
                 zerolinecolor=cfg_axes["zerolinecolor"],
                 showticklabels=True,
@@ -857,14 +870,16 @@ class BWRPlots:
                         y_values_for_range.extend(numeric_vals.tolist())
 
             if y_values_for_range:
-                min_y_data, max_y_data = min(y_values_for_range), max(
-                    y_values_for_range
+                from bwr_plots.utils import calculate_yaxis_grid_params
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=y_values_for_range,
+                    padding=0.05,
+                    num_gridlines=5
                 )
-                data_range = max_y_data - min_y_data
-                padding = data_range * 0.05 if data_range > 0 else 0.1
-                min_y = min_y_data - padding
-                max_y = max_y_data + padding
-                local_axis_options["primary_range"] = [min_y, max_y]
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
 
         # --- Prepare Secondary Data ---
         scaled_secondary_data = (
@@ -923,7 +938,7 @@ class BWRPlots:
         )
 
         # --- Apply Layout & Axes ---
-        self._apply_common_layout(
+        total_height, bottom_margin = self._apply_common_layout(
             fig,
             title,
             subtitle,
@@ -937,6 +952,32 @@ class BWRPlots:
             plot_area_b_padding=plot_area_b_padding,
         )
         self._apply_common_axes(fig, local_axis_options, is_secondary=has_secondary)
+
+        # --- Debugging Output ---
+        try:
+            from termcolor import colored
+            color = 'cyan'
+        except ImportError:
+            def colored(x, color=None): return x
+            color = None
+        print(colored("[DEBUG] scatter_plot: primary_data shape: {}".format(primary_data_orig.shape if hasattr(primary_data_orig, 'shape') else 'N/A'), color))
+        print(colored("[DEBUG] scatter_plot: primary_data columns: {}".format(list(primary_data_orig.columns) if hasattr(primary_data_orig, 'columns') else 'N/A'), color))
+        print(colored("[DEBUG] scatter_plot: has_secondary: {}".format(has_secondary), color))
+        if has_secondary and secondary_data_orig is not None:
+            print(colored("[DEBUG] scatter_plot: secondary_data shape: {}".format(secondary_data_orig.shape if hasattr(secondary_data_orig, 'shape') else 'N/A'), color))
+            print(colored("[DEBUG] scatter_plot: secondary_data columns: {}".format(list(secondary_data_orig.columns) if hasattr(secondary_data_orig, 'columns') else 'N/A'), color))
+        # Print layout margins
+        layout = fig.layout
+        print(colored(f"[DEBUG] scatter_plot: layout.margin: l={layout.margin.l}, r={layout.margin.r}, t={layout.margin.t}, b={layout.margin.b}", color))
+        # Print xaxis automargin and ticklabel settings
+        if hasattr(layout, 'xaxis'):
+            print(colored(f"[DEBUG] scatter_plot: xaxis.automargin: {getattr(layout.xaxis, 'automargin', 'N/A')}", color))
+            print(colored(f"[DEBUG] scatter_plot: xaxis.tickmode: {getattr(layout.xaxis, 'tickmode', 'N/A')}", color))
+            print(colored(f"[DEBUG] scatter_plot: xaxis.nticks: {getattr(layout.xaxis, 'nticks', 'N/A')}", color))
+            print(colored(f"[DEBUG] scatter_plot: xaxis.tickvals: {getattr(layout.xaxis, 'tickvals', 'N/A')}", color))
+        # Print number of x-ticks if possible
+        if scaled_primary_data is not None and hasattr(scaled_primary_data, 'index'):
+            print(colored(f"[DEBUG] scatter_plot: number of x-ticks: {len(scaled_primary_data.index)}", color))
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1081,6 +1122,20 @@ class BWRPlots:
         # Set y-axis range to 0-1 by default
         if "primary_range" not in local_axis_options:
             local_axis_options["primary_range"] = cfg_plot.get("y_range", [0, 1])
+
+        # --- Ensure first and last x-tick are always shown ---
+        if not normalized_data.empty and isinstance(normalized_data.index, pd.DatetimeIndex):
+            tickvals = list(normalized_data.index)
+            if len(tickvals) > 1:
+                # Always include first and last
+                x_tickvals = [tickvals[0], tickvals[-1]]
+                # Optionally, add more ticks for readability (e.g., every Nth)
+                n = max(1, len(tickvals) // 8)
+                x_tickvals += [tickvals[i] for i in range(n, len(tickvals)-1, n)]
+                x_tickvals = sorted(set(x_tickvals), key=lambda x: x)
+                local_axis_options["x_tickvals"] = x_tickvals
+            else:
+                local_axis_options["x_tickvals"] = tickvals
 
         # --- Call the Chart Function ---
         _add_metric_share_area_traces(

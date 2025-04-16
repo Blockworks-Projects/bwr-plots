@@ -51,29 +51,41 @@ def _add_metric_share_area_traces(
 
     for i, col in enumerate(sorted_cols):
         # Use modulo to cycle through palette if we have more columns than colors
-        palette_idx = i % len(color_palette)
-        colors[col] = color_palette[palette_idx]
+        colors[col] = color_palette[i % len(color_palette)]
 
     print(f"Assigned colors: {colors}")
 
-    # Simply use Plotly's built-in stacked area functionality
+    # Area traces (main traces, not shown in legend)
     for i, col in enumerate(sorted_cols):
-        print(f"Adding trace for column '{col}' with color '{colors[col]}'")
-
-        # For area plot, add filled area trace - use stackgroup for proper stacking
         fig.add_trace(
             go.Scatter(
                 x=data.index,
                 y=data[col],
                 stackgroup="one",  # This makes it a proper stacked area
-                mode="none",  # No markers or lines on the data points
+                mode="lines+markers",  # Show lines and markers (for legend)
                 name=col,  # Use the column name as the trace name
                 fillcolor=colors[col],
-                line=dict(width=0),  # No line border
+                line=dict(width=0.5, color=colors[col]),
+                marker=dict(symbol="circle", size=12, opacity=0),  # Invisible markers on plot
                 hovertemplate="%{y:.1%}<extra>" + col + "</extra>",
+                legendgroup=col,
+                showlegend=False,  # Hide main trace from legend
             )
         )
-        print(f"  Added area trace for {col}")
+
+    # Add invisible traces for legend entries (visible circles)
+    for i, col in enumerate(sorted_cols):
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=col,
+                mode="markers",
+                marker=dict(symbol="circle", size=12, color=colors[col]),
+                legendgroup=col,
+                showlegend=True,
+            )
+        )
 
     print(f"Total traces added: {len(fig.data)}")
-    print("==== END DEBUGGING ====\n")
+    print("==== END DEBUGGING ====")

@@ -67,9 +67,25 @@ print("==== END DEBUG DATA ====\n")
 
 print("Synthetic data generated.")
 
+# Print detailed debug info about the DataFrame
+print("\n==== DETAILED DATAFRAME DEBUGGING ====")
+print(f"dtypes:\n{df_shares.dtypes}")
+print(f"index type: {type(df_shares.index)}")
+print(f"Any NaNs? {df_shares.isnull().values.any()}")
+print(f"Any all-zero columns? {[col for col in df_shares.columns if (df_shares[col] == 0).all()]}")
+print(f"Any all-NaN columns? {[col for col in df_shares.columns if df_shares[col].isnull().all()]}")
+print(f"First 5 rows:\n{df_shares.head().to_string()}")
+print(f"Last 5 rows:\n{df_shares.tail().to_string()}")
+print("==== END DETAILED DEBUGGING ====")
+
+# Print normalized data right before plotting
+print("\n==== DATA PASSED TO PLOT ====")
+print(df_shares.head(10).to_string())
+print("==== END DATA PASSED TO PLOT ====")
 
 # --- Check for environment variable to open browser ---
-open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+# open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+open_browser = True
 
 # --- Plotting ---
 print("Generating metric share area plot...")
@@ -83,5 +99,12 @@ fig_metric = plotter.metric_share_area_plot(
     open_in_browser=open_browser,
 )
 
+# Debug: Print the figure's data to check if traces are present
+print("\n==== DEBUG: Plotly Figure Data ====")
+for i, trace in enumerate(fig_metric.data):
+    print(f"Trace {i}: type={trace.type}, name={trace.name}, x[0:3]={trace.x[:3]}, y[0:3]={trace.y[:3]}")
+print("==== END DEBUG ====")
+
 print(f"Metric share area plot HTML saved to '{OUTPUT_DIR}' directory.")
+print("If the plot is blank, check the browser console for JavaScript errors and verify the figure data above.")
 print("-" * 30)
