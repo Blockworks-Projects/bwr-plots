@@ -6,4 +6,7 @@ git reset --hard origin/main
 git pull origin main
 
 # Repomix
-npx repomix C:\Users\dansh\Documents\Investing\seven7s\s7-frontend\components\charts
+npx repomix C:\Users\dansh\Documents\Investing\seven7s\s7-core\src
+
+# Generate Tree File Full -- Mac
+tree -afi > .repomix/tree.txt
