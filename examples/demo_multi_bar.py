@@ -1,5 +1,6 @@
 # examples/demo_multi_bar.py
-import pandas as pd
+import os, pandas as pd
+import numpy as np
 from pathlib import Path
 import sys
 
@@ -47,18 +48,22 @@ df_monthly_plot = df_monthly["2023-01-01":]
 # Format index for better display
 df_monthly_plot.index = df_monthly_plot.index.strftime("%Y-%m")
 
+
+# --- Check for environment variable to open browser ---
+open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+
 # --- Plotting ---
 print("Generating multi-bar plot...")
 fig_multi = plotter.multi_bar(
     data=df_monthly_plot,
-    title="Monthly Aggregated TVL by Protocol",
+    title="Multi Bar Chart",
     subtitle="Sum of Daily TVL per Month (Simulated Data)",
     source="Test Data CSV",
     show_bar_values=True,
     prefix="$",
     save_image=True,
-    save_path=str(OUTPUT_DIR),  # Use corrected output path
-    open_in_browser=False,
+    save_path=str(OUTPUT_DIR),
+    open_in_browser=open_browser,
 )
 
 print(f"Multi-bar plot HTML saved to '{OUTPUT_DIR}' directory.")

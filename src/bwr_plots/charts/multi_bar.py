@@ -10,7 +10,7 @@ def _add_multi_bar_traces(
     cfg_plot: Dict,
     cfg_colors: Dict,
     colors: Optional[Dict[str, str]] = None,
-    show_bar_values: bool = True,
+    show_bar_values: bool = False,
     tick_frequency: int = 1,
 ) -> None:
     """
@@ -55,29 +55,43 @@ def _add_multi_bar_traces(
             series_colors[col] = next(color_palette)
 
     # Add traces for each column
-    for col in numeric_cols:
+    for i, col in enumerate(numeric_cols):
+        if i % tick_frequency != 0:
+            continue
+
         trace_color = series_colors[col]
 
-        # Format text for bar values if needed
+        text_values = None
         if show_bar_values:
-            text = data[col].apply(lambda v: f"{v:.1f}" if pd.notna(v) else "")
-            textposition = "outside"
-        else:
-            text = None
-            textposition = None
+            text_values = data[col].apply(
+                lambda x: f"{x:.2f}" if abs(x) < 100 else f"{x:.0f}"
+            )
 
-        # Add the bar trace
         fig.add_trace(
             go.Bar(
                 x=data.index,
                 y=data[col],
                 name=col,
                 marker_color=trace_color,
-                text=text,
-                textposition=textposition,
-                textfont=dict(
-                    family="Maison Neue, sans-serif", size=12, color="#adb0b5"
+                text=text_values,
+                textposition=cfg_plot.get("textposition", "outside"),
+                showlegend=False,  # Hide from legend since we'll use circle markers
+            )
+        )
+
+        # Add dummy trace for circle legend marker
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=col,
+                mode="markers",
+                marker=dict(
+                    symbol=cfg_plot.get("legend_marker_symbol", "circle"),
+                    size=12,
+                    color=trace_color,
                 ),
+                showlegend=True,
             )
         )
 

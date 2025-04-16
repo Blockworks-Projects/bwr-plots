@@ -59,17 +59,32 @@ def _add_stacked_bar_traces(
             series_colors[col] = next(color_palette)
 
     # Add traces for each column in order
-    for col in sorted_cols:
+    for i, col in enumerate(reversed(numeric_cols)):
         trace_color = series_colors[col]
 
-        # Add the stacked bar trace
         fig.add_trace(
             go.Bar(
                 x=data.index,
                 y=data[col],
                 name=col,
                 marker_color=trace_color,
-                # No text for stacked bars usually, as it gets cluttered
+                showlegend=False,
+            )
+        )
+
+        # Add dummy trace for circle legend marker
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                name=col,
+                mode="markers",
+                marker=dict(
+                    symbol=cfg_plot.get("legend_marker_symbol", "circle"),
+                    size=12,
+                    color=trace_color,
+                ),
+                showlegend=True,
             )
         )
 

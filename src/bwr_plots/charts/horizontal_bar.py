@@ -16,6 +16,7 @@ def _add_horizontal_bar_traces(
     bargap: float,
     color_positive: Optional[str] = None,
     color_negative: Optional[str] = None,
+    show_bar_values: bool = True,
 ) -> None:
     """
     Adds horizontal bar chart traces to the provided figure.
@@ -32,6 +33,7 @@ def _add_horizontal_bar_traces(
         bargap: Gap between bars
         color_positive: Color for positive values
         color_negative: Color for negative values
+        show_bar_values: Whether to show bar values
     """
     if data is None or data.empty:
         print("Warning: No data provided for horizontal bar chart.")
@@ -60,8 +62,12 @@ def _add_horizontal_bar_traces(
     # Create colors array based on value sign
     colors = [pos_color if val >= 0 else neg_color for val in sorted_data[x_column]]
 
-    # Create text for display inside or next to bars
-    text_values = sorted_data[x_column].apply(lambda x: f"{x:,.0f}")
+    if show_bar_values:
+        text_values = sorted_data[x_column].apply(lambda x: f"{x:,.0f}")
+        textposition = cfg_plot.get("textposition", "outside")
+    else:
+        text_values = None
+        textposition = None
 
     # Create the horizontal bar trace
     fig.add_trace(
@@ -70,7 +76,7 @@ def _add_horizontal_bar_traces(
             x=sorted_data[x_column],
             orientation=cfg_plot.get("orientation", "h"),
             text=text_values,
-            textposition=cfg_plot.get("textposition", "outside"),
+            textposition=textposition,
             marker_color=colors,
             width=bar_height,
             textfont=dict(family="Maison Neue, sans-serif", size=14),

@@ -1,5 +1,5 @@
 # examples/demo_scatter.py
-import pandas as pd
+import os, pandas as pd
 from pathlib import Path
 import sys
 
@@ -45,17 +45,22 @@ except Exception as e:
 # Optional: Select specific columns if needed
 df_plot = df[["uniswap", "aave"]]  # Plotting only two series for clarity
 
+
+# --- Check for environment variable to open browser ---
+# By default, open the plot in the web browser unless explicitly disabled via env var
+open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "1") == "1"
+
 # --- Plotting ---
 print("Generating scatter plot...")
 fig_scatter = plotter.scatter_plot(
     data=df_plot,
-    title="Protocol TVL Over Time",
+    title="Scatter Plot",
     subtitle="Comparing Uniswap and Aave TVL (Simulated Data)",
     source="Test Data CSV",
     prefix="$",
     save_image=True,
-    save_path=str(OUTPUT_DIR),  # Use the corrected output path
-    open_in_browser=True,  # Set to True to open plot in browser
+    save_path=str(OUTPUT_DIR),
+    open_in_browser=open_browser,
 )
 
 print(f"Scatter plot HTML saved to '{OUTPUT_DIR}' directory.")

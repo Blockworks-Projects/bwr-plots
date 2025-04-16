@@ -1,5 +1,5 @@
 # examples/demo_horizontal_bar.py
-import pandas as pd
+import os, pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
@@ -31,20 +31,24 @@ values = np.random.randint(-50, 100, size=len(categories)) * 1000
 df_hbar = pd.DataFrame({"label": categories, "performance": values})
 print("Synthetic data generated.")
 
+
+# --- Check for environment variable to open browser ---
+open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+
 # --- Plotting ---
 print("Generating horizontal bar chart...")
 fig_hbar = plotter.horizontal_bar(
     data=df_hbar,
     y_column="label",
     x_column="performance",
-    title="Performance Metrics by Initiative",
+    title="Horizontal Bar Chart",
     subtitle="Positive and Negative Performance Scores (Simulated)",
     source="Synthetic Data",
     sort_ascending=True,
     prefix="$",
     save_image=True,
-    save_path=str(OUTPUT_DIR),  # Use corrected output path
-    open_in_browser=False,
+    save_path=str(OUTPUT_DIR),
+    open_in_browser=open_browser,
 )
 
 print(f"Horizontal bar chart HTML saved to '{OUTPUT_DIR}' directory.")

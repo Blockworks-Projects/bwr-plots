@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import datetime
 import time
+import sys
 
 from typing import Dict, List, Optional, Union, Tuple, Any
 
@@ -16,7 +17,6 @@ from typing import Dict, List, Optional, Union, Tuple, Any
 from .config import DEFAULT_BWR_CONFIG
 from .utils import (
     deep_merge_dicts,
-    _generate_filename_from_title,
     _get_scale_and_suffix,
 )
 
@@ -42,14 +42,13 @@ def _generate_filename_from_title(title: str) -> str:
         A filename-safe string based on the title
     """
     if not title:
-        return f"plot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        return "untitled_plot"
 
     # Replace spaces and special characters with underscores
     safe_name = re.sub(r"[^\w\s-]", "", title).strip().lower()
     safe_name = re.sub(r"[-\s]+", "_", safe_name)
 
-    # Add timestamp for uniqueness
-    return f"{safe_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    return safe_name if safe_name else "untitled_plot"
 
 
 def save_plot_image(
@@ -328,6 +327,38 @@ class BWRPlots:
             color=font_config.get("color"),
         )
 
+    def _ensure_datetime_index(
+        self, data: Union[pd.DataFrame, pd.Series]
+    ) -> Union[pd.DataFrame, pd.Series]:
+        """
+        Attempts to convert the index of a DataFrame or Series to datetime.
+        Returns the original data if conversion fails.
+
+        Args:
+            data: DataFrame or Series whose index should be converted
+
+        Returns:
+            DataFrame or Series with datetime index if conversion succeeded,
+            original data otherwise
+        """
+        if data is None or data.empty:
+            return data
+
+        if not isinstance(data.index, pd.DatetimeIndex):
+            try:
+                original_name = data.index.name  # Preserve index name if any
+                data_copy = data.copy()  # Avoid modifying original if conversion fails
+                data_copy.index = pd.to_datetime(data_copy.index, errors="raise")
+                data_copy.index.name = original_name  # Restore index name
+                return data_copy
+            except Exception as e:
+                print(
+                    f"[WARNING] _ensure_datetime_index: Could not convert index to datetime: {e}. Proceeding with original index type."
+                )
+                return data  # Return original on failure
+        else:
+            return data  # Already datetime
+
     def _apply_common_layout(
         self,
         fig: go.Figure,
@@ -397,7 +428,7 @@ class BWRPlots:
             min_neg_y = min(min_neg_y, annot_y)
 
         space_below = abs(min_neg_y * height) if min_neg_y < -0.05 else 0
-        bottom_margin = max(cfg_layout["margin_b_min"], int(space_below) + 30)
+        bottom_margin = max(cfg_layout["margin_b_min"], int(space_below) + 50)
 
         top_margin = cfg_layout["margin_t_base"] + cfg_general["title_padding"]
 
@@ -466,6 +497,10 @@ class BWRPlots:
                 xanchor=annot_xanchor,
                 yanchor=annot_yanchor,
             )
+
+        # Add xaxis automargin for better padding with long labels
+        fig.update_layout(xaxis_automargin=True)
+
         return total_height, bottom_margin
 
     def _apply_common_axes(
@@ -642,20 +677,20 @@ class BWRPlots:
         subtitle: str = "",
         source: str = "",
         date: Optional[str] = None,
-        axis_options: Optional[Dict] = None,
         height: Optional[int] = None,
-        legend_y: Optional[float] = None,
-        source_y: Optional[float] = None,
         source_x: Optional[float] = None,
+        source_y: Optional[float] = None,
         fill_mode: Optional[str] = None,
         fill_color: Optional[str] = None,
+        show_legend: bool = True,
+        use_watermark: Optional[bool] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
-        use_watermark: Optional[bool] = None,
+        axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded scatter/line plot.
@@ -666,16 +701,16 @@ class BWRPlots:
             subtitle: Subtitle text
             source: Source citation text
             date: Date for citation (if None, tries to use max date from data)
-            axis_options: Dictionary of axis styling overrides
             height: Plot height in pixels
-            legend_y: Y position for legend (relative 0-1)
-            source_y: Y position for source citation
             source_x: X position for source citation
+            source_y: Y position for source citation
             fill_mode: Fill mode (e.g., 'tozeroy')
             fill_color: Fill color
+            show_legend: Whether to show legend
+            use_watermark: Whether to show watermark
             prefix: Y-axis tick prefix
             suffix: Y-axis tick suffix
-            use_watermark: Whether to show watermark
+            axis_options: Dictionary of axis styling overrides
             plot_area_b_padding: Bottom padding for plot area
             save_image: Whether to save as PNG
             save_path: Path to save image (default: current directory)
@@ -693,7 +728,7 @@ class BWRPlots:
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
-        current_legend_y = legend_y if legend_y is not None else cfg_leg["default_y"]
+        current_legend_y = cfg_leg["y"] if show_legend else 0
         use_watermark_flag = (
             use_watermark if use_watermark is not None else cfg_wm["default_use"]
         )
@@ -705,30 +740,45 @@ class BWRPlots:
         )
 
         # --- Data Handling & Preparation ---
-        if not isinstance(data, dict):
-            data = {"primary": data}
-        has_secondary = "secondary" in data and data["secondary"] is not None
-        if has_secondary and isinstance(data["secondary"], pd.Series):
-            data["secondary"] = pd.DataFrame(data["secondary"])
-        if isinstance(data["primary"], pd.Series):
-            data["primary"] = pd.DataFrame(data["primary"])
+        # Determine if we have primary and secondary data
+        has_secondary = False
+        primary_data_orig = None
+        secondary_data_orig = None
 
-        primary_data_orig = data.get("primary")
-        secondary_data_orig = data.get("secondary")
+        if isinstance(data, dict):
+            has_secondary = "secondary" in data
+            primary_data_orig = data.get("primary")
+            secondary_data_orig = data.get("secondary")
+        else:
+            primary_data_orig = data
+
+        # Ensure we have DataFrame objects (not Series)
+        if primary_data_orig is not None and isinstance(primary_data_orig, pd.Series):
+            primary_data_orig = pd.DataFrame(primary_data_orig)
+        if secondary_data_orig is not None and isinstance(
+            secondary_data_orig, pd.Series
+        ):
+            secondary_data_orig = pd.DataFrame(secondary_data_orig)
+
+        # Attempt index conversion early
+        primary_data_orig = self._ensure_datetime_index(primary_data_orig)
+        secondary_data_orig = (
+            self._ensure_datetime_index(secondary_data_orig) if has_secondary else None
+        )
 
         # --- Determine Effective Date ---
         effective_date = date
         if effective_date is None:
             source_for_date = (
                 primary_data_orig
-                if primary_data_orig is not None
+                if primary_data_orig is not None and not primary_data_orig.empty
                 else secondary_data_orig
             )
+
             if (
                 source_for_date is not None
                 and not source_for_date.empty
-                and hasattr(source_for_date, "index")
-                and pd.api.types.is_datetime64_any_dtype(source_for_date.index)
+                and isinstance(source_for_date.index, pd.DatetimeIndex)
             ):
                 try:
                     max_dt = source_for_date.index.max()
@@ -736,10 +786,16 @@ class BWRPlots:
                         max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                     )
                 except Exception as e:
-                    effective_date = ""
-                    print(f"Warning: Could not automatically determine max date: {e}")
+                    effective_date = datetime.datetime.now().strftime(
+                        "%Y-%m-%d"
+                    )  # Default to today if error
+                    print(
+                        f"[Warning] scatter_plot: Could not automatically determine max date: {e}. Using today's date."
+                    )
             else:
-                effective_date = ""
+                effective_date = datetime.datetime.now().strftime(
+                    "%Y-%m-%d"
+                )  # Default to today if data empty
 
         # --- Figure Creation ---
         fig = make_subplots(specs=[[{"secondary_y": has_secondary}]])
@@ -872,7 +928,7 @@ class BWRPlots:
             title,
             subtitle,
             plot_height,
-            True,
+            show_legend,
             current_legend_y,
             source,
             effective_date,
@@ -903,17 +959,17 @@ class BWRPlots:
         source: str = "",
         date: Optional[str] = None,
         height: Optional[int] = None,
-        legend_y: Optional[float] = None,
-        source_y: Optional[float] = None,
         source_x: Optional[float] = None,
+        source_y: Optional[float] = None,
+        show_legend: bool = True,
         use_watermark: Optional[bool] = None,
-        axis_options: Optional[Dict] = None,
+        axis_options: Optional[Dict[str, Any]] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded metric share area plot (stacked areas summing to 100%).
@@ -925,9 +981,9 @@ class BWRPlots:
             source: Source citation text
             date: Date for citation (if None, tries to use max date from data)
             height: Plot height in pixels
-            legend_y: Y position for legend (relative 0-1)
-            source_y: Y position for source citation
             source_x: X position for source citation
+            source_y: Y position for source citation
+            show_legend: Whether to show legend
             use_watermark: Whether to show watermark
             axis_options: Dictionary of axis styling overrides
             prefix: Y-axis tick prefix
@@ -950,19 +1006,23 @@ class BWRPlots:
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
-        current_legend_y = legend_y if legend_y is not None else cfg_leg["default_y"]
+        current_legend_y = cfg_leg["y"] if show_legend else 0
         use_watermark_flag = (
             use_watermark if use_watermark is not None else cfg_wm["default_use"]
         )
 
         # --- Data Handling & Preparation ---
-        # Convert data from Series to DataFrame if needed
         if isinstance(data, pd.Series):
-            data = pd.DataFrame(data)
+            plot_data = pd.DataFrame(data)
+        else:
+            plot_data = data.copy()
+
+        # Attempt index conversion
+        plot_data = self._ensure_datetime_index(plot_data)
 
         # Normalize data rows to sum to 1 (100%)
-        numeric_data = data.select_dtypes(include=np.number)
-        normalized_data = data.copy()
+        numeric_data = plot_data.select_dtypes(include=np.number)
+        normalized_data = plot_data.copy()
 
         # Only normalize rows with sum > 0 to avoid division by zero
         row_sums = numeric_data.sum(axis=1)
@@ -978,18 +1038,24 @@ class BWRPlots:
 
         # --- Determine Effective Date ---
         effective_date = date
-        if effective_date is None and not data.empty:
-            if pd.api.types.is_datetime64_any_dtype(data.index):
+        if effective_date is None and not plot_data.empty:
+            if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
-                    max_dt = data.index.max()
+                    max_dt = plot_data.index.max()
                     effective_date = (
                         max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                     )
                 except Exception as e:
-                    effective_date = ""
-                    print(f"Warning: Could not automatically determine max date: {e}")
+                    effective_date = datetime.datetime.now().strftime(
+                        "%Y-%m-%d"
+                    )  # Default to today if error
+                    print(
+                        f"[Warning] metric_share_area: Could not automatically determine max date: {e}. Using today's date."
+                    )
             else:
-                effective_date = ""
+                effective_date = datetime.datetime.now().strftime(
+                    "%Y-%m-%d"
+                )  # Default to today's date if index isn't datetime
 
         # --- Figure Creation ---
         fig = make_subplots()
@@ -999,15 +1065,17 @@ class BWRPlots:
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
 
-        if suffix is not None:
-            local_axis_options["primary_suffix"] = suffix
-        else:
-            local_axis_options["primary_suffix"] = "%"
-
-        # Set tickformat to percentage by default
+        # Fix suffix and tickformat to avoid double % symbols
         if "primary_tickformat" not in local_axis_options:
             local_axis_options["primary_tickformat"] = cfg_plot.get(
                 "y_tickformat", ".0%"
+            )
+
+        if suffix is not None:
+            local_axis_options["primary_suffix"] = suffix
+        else:
+            local_axis_options["primary_suffix"] = (
+                ""  # Empty suffix as format already has %
             )
 
         # Set y-axis range to 0-1 by default
@@ -1050,25 +1118,22 @@ class BWRPlots:
 
     def bar_chart(
         self,
-        data: Union[Dict[str, pd.DataFrame], pd.DataFrame, pd.Series],
+        data: Union[pd.DataFrame, pd.Series],
         title: str = "",
         subtitle: str = "",
         source: str = "",
         date: Optional[str] = None,
-        axis_options: Optional[Dict] = None,
         height: Optional[int] = None,
-        legend_y: Optional[float] = None,
-        source_y: Optional[float] = None,
-        source_x: Optional[float] = None,
-        group_days: Optional[int] = None,
+        bar_color: Optional[str] = None,
+        show_legend: bool = False,
         use_watermark: Optional[bool] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
-        bar_color: Optional[str] = None,
+        axis_options: Optional[Dict] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded bar chart.
@@ -1079,16 +1144,14 @@ class BWRPlots:
             subtitle: Subtitle text
             source: Source citation text
             date: Date for citation (if None, tries to use max date from data)
-            axis_options: Dictionary of axis styling overrides
             height: Plot height in pixels
-            legend_y: Y position for legend (relative 0-1)
-            source_y: Y position for source citation
-            source_x: X position for source citation
-            group_days: Group data by every N days if provided
+            x_column: Column name to use for x-axis values
+            y_column: Column name to use for y-axis categories
+            bar_color: Bar color override
+            show_legend: Whether to show legend
             use_watermark: Whether to show watermark
             prefix: Y-axis tick prefix
             suffix: Y-axis tick suffix
-            bar_color: Bar color override
             plot_area_b_padding: Bottom padding for plot area
             save_image: Whether to save as PNG
             save_path: Path to save image (default: current directory)
@@ -1106,15 +1169,12 @@ class BWRPlots:
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
-        current_legend_y = legend_y if legend_y is not None else cfg_leg["default_y"]
+        current_legend_y = cfg_leg["y"] if show_legend else 0
         use_watermark_flag = (
             use_watermark if use_watermark is not None else cfg_wm["default_use"]
         )
         current_bar_color = (
             bar_color if bar_color is not None else cfg_colors["bar_default"]
-        )
-        current_group_days = (
-            group_days if group_days is not None else cfg_plot["default_group_days"]
         )
 
         # --- Data Handling & Preparation ---
@@ -1132,41 +1192,32 @@ class BWRPlots:
             # Create an empty figure
             fig = make_subplots()
         else:
-            # Group data if requested
-            if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
-                plot_data.index
-            ):
-                try:
-                    if isinstance(plot_data, pd.DataFrame):
-                        grouped = plot_data.groupby(
-                            pd.Grouper(freq=f"{current_group_days}D")
-                        ).sum()
-                    else:  # Series
-                        grouped = plot_data.groupby(
-                            pd.Grouper(freq=f"{current_group_days}D")
-                        ).sum()
-                    plot_data = grouped
-                except Exception as e:
-                    print(
-                        f"Warning: Could not group data by {current_group_days} days: {e}"
-                    )
-
-            # --- Determine Effective Date ---
-            effective_date = date
-            if effective_date is None and not plot_data.empty:
-                if pd.api.types.is_datetime64_any_dtype(plot_data.index):
-                    try:
-                        max_dt = plot_data.index.max()
-                        effective_date = (
-                            max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
-                        )
-                    except Exception as e:
-                        effective_date = ""
-                        print(
-                            f"Warning: Could not automatically determine max date: {e}"
-                        )
-                else:
-                    effective_date = ""
+            # Process the data
+            if plot_data is not None and not plot_data.empty:
+                effective_date = date
+                if effective_date is None:
+                    if not plot_data.empty and isinstance(
+                        plot_data.index, pd.DatetimeIndex
+                    ):
+                        try:
+                            max_dt = plot_data.index.max()
+                            effective_date = (
+                                max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                            )
+                        except Exception as e:
+                            effective_date = datetime.datetime.now().strftime(
+                                "%Y-%m-%d"
+                            )  # Default to today if error
+                            print(
+                                f"[Warning] bar_chart: Could not automatically determine max date: {e}. Using today's date."
+                            )
+                    elif not plot_data.empty:  # Index is not datetime
+                        # Default to today's date if index isn't datetime
+                        effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                    else:  # Data is empty
+                        effective_date = datetime.datetime.now().strftime(
+                            "%Y-%m-%d"
+                        )  # Default to today if data empty
 
             # --- Figure Creation ---
             fig = make_subplots()
@@ -1221,12 +1272,12 @@ class BWRPlots:
             title,
             subtitle,
             plot_height,
-            True,
+            show_legend,
             current_legend_y,
             source,
             effective_date,
-            source_x,
-            source_y,
+            None,
+            None,
             plot_area_b_padding=plot_area_b_padding,
         )
         self._apply_common_axes(fig, local_axis_options)
@@ -1257,6 +1308,7 @@ class BWRPlots:
         height: Optional[int] = None,
         y_column: Optional[str] = None,
         x_column: Optional[str] = None,
+        show_bar_values: bool = True,
         color_positive: Optional[str] = None,
         color_negative: Optional[str] = None,
         sort_ascending: Optional[bool] = None,
@@ -1264,6 +1316,7 @@ class BWRPlots:
         bargap: Optional[float] = None,
         source_y: Optional[float] = None,
         source_x: Optional[float] = None,
+        legend_y: Optional[float] = None,  # Add legend_y back as an optional parameter
         use_watermark: Optional[bool] = None,
         axis_options: Optional[Dict] = None,
         prefix: Optional[str] = None,
@@ -1271,7 +1324,7 @@ class BWRPlots:
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,  # Defaulted to False like others
     ) -> go.Figure:
         """
         Creates a Blockworks branded horizontal bar chart.
@@ -1285,6 +1338,7 @@ class BWRPlots:
             height: Plot height in pixels
             y_column: Column name to use for y-axis categories
             x_column: Column name to use for x-axis values
+            show_bar_values: Whether to display values on top of bars
             color_positive: Color for positive values
             color_negative: Color for negative values
             sort_ascending: Whether to sort the bars in ascending order by value
@@ -1309,6 +1363,7 @@ class BWRPlots:
         cfg_plot = self.config["plot_specific"]["horizontal_bar"]
         cfg_colors = self.config["colors"]
         cfg_wm = self.config["watermark"]
+        cfg_leg = self.config["legend"]  # Needed for default legend_y
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
@@ -1330,6 +1385,9 @@ class BWRPlots:
         current_x_column = (
             x_column if x_column is not None else cfg_plot["default_x_column"]
         )
+        current_legend_y = (
+            legend_y if legend_y is not None else cfg_leg["y"]
+        )  # Use legend_y if provided, otherwise use default from config
 
         # --- Data Validation ---
         if data is None or data.empty:
@@ -1399,15 +1457,16 @@ class BWRPlots:
             _add_horizontal_bar_traces(
                 fig=fig,
                 data=plot_data,
-                y_column=current_y_column,
                 x_column=current_x_column,
+                y_column=current_y_column,
+                bar_height=current_bar_height,
                 cfg_plot=cfg_plot,
                 cfg_colors=cfg_colors,
-                sort_ascending=current_sort_ascending,
-                bar_height=current_bar_height,
                 bargap=current_bargap,
                 color_positive=color_positive,
                 color_negative=color_negative,
+                show_bar_values=show_bar_values,
+                sort_ascending=current_sort_ascending,  # Add the missing sort_ascending parameter
             )
 
         # --- Apply Layout & Axes ---
@@ -1462,10 +1521,10 @@ class BWRPlots:
         watermark_y: Optional[float] = None,
         source_x: Optional[float] = None,
         source_y: Optional[float] = None,
-        plot_area_b_padding: Optional[int] = None,
+        plot_area_b_padding: Optional[int] = None,  # Unused for table
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,  # Defaulted to False
     ) -> go.Figure:
         """
         Creates a Blockworks branded table.
@@ -1578,23 +1637,23 @@ class BWRPlots:
         subtitle: str = "",
         source: str = "",
         date: Optional[str] = None,
-        axis_options: Optional[Dict] = None,
         height: Optional[int] = None,
-        legend_y: Optional[float] = None,
-        source_y: Optional[float] = None,
         source_x: Optional[float] = None,
-        colors: Optional[Dict[str, str]] = None,
+        source_y: Optional[float] = None,
+        show_legend: bool = True,
         group_days: Optional[int] = None,
+        colors: Optional[Dict[str, str]] = None,
         scale_values: Optional[bool] = None,
         use_watermark: Optional[bool] = None,
         show_bar_values: Optional[bool] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
         tick_frequency: Optional[int] = None,
+        axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded multi-bar chart (grouped bars).
@@ -1605,13 +1664,12 @@ class BWRPlots:
             subtitle: Subtitle text
             source: Source citation text
             date: Date for citation (if None, tries to use max date from data)
-            axis_options: Dictionary of axis styling overrides
             height: Plot height in pixels
-            legend_y: Y position for legend (relative 0-1)
-            source_y: Y position for source citation
             source_x: X position for source citation
-            colors: Dictionary mapping column names to colors
+            source_y: Y position for source citation
+            show_legend: Whether to show legend
             group_days: Group data by every N days if provided
+            colors: Dictionary mapping column names to colors
             scale_values: Whether to scale values (e.g., K, M, B)
             use_watermark: Whether to show watermark
             show_bar_values: Whether to display values on top of bars
@@ -1635,7 +1693,7 @@ class BWRPlots:
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
-        current_legend_y = legend_y if legend_y is not None else cfg_leg["default_y"]
+        current_legend_y = cfg_leg["y"] if show_legend else 0
         use_watermark_flag = (
             use_watermark if use_watermark is not None else cfg_wm["default_use"]
         )
@@ -1661,6 +1719,9 @@ class BWRPlots:
         # --- Data Handling & Preparation ---
         plot_data = data.copy()
 
+        # Attempt index conversion
+        plot_data = self._ensure_datetime_index(plot_data)
+
         # Group data if requested
         if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
             plot_data.index
@@ -1678,17 +1739,23 @@ class BWRPlots:
         # --- Determine Effective Date ---
         effective_date = date
         if effective_date is None and not plot_data.empty:
-            if pd.api.types.is_datetime64_any_dtype(plot_data.index):
+            if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
                     max_dt = plot_data.index.max()
                     effective_date = (
                         max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                     )
                 except Exception as e:
-                    effective_date = ""
-                    print(f"Warning: Could not automatically determine max date: {e}")
+                    effective_date = datetime.datetime.now().strftime(
+                        "%Y-%m-%d"
+                    )  # Default to today if error
+                    print(
+                        f"[Warning] multi_bar: Could not automatically determine max date: {e}. Using today's date."
+                    )
             else:
-                effective_date = ""
+                effective_date = datetime.datetime.now().strftime(
+                    "%Y-%m-%d"
+                )  # Default to today's date if index isn't datetime
 
         # --- Figure Creation ---
         fig = make_subplots()
@@ -1777,23 +1844,21 @@ class BWRPlots:
         source: str = "",
         date: Optional[str] = None,
         height: Optional[int] = None,
-        legend_y: Optional[float] = None,
-        source_y: Optional[float] = None,
         source_x: Optional[float] = None,
-        colors: Optional[Dict[str, str]] = None,
-        sort_descending: Optional[bool] = None,
-        y_axis_title: Optional[str] = None,
-        axis_options: Optional[Dict] = None,
-        bar_mode: Optional[str] = None,
+        source_y: Optional[float] = None,
+        show_legend: bool = True,
         group_days: Optional[int] = None,
+        colors: Optional[Dict[str, str]] = None,
         scale_values: Optional[bool] = None,
+        sort_descending: Optional[bool] = None,
         use_watermark: Optional[bool] = None,
+        y_axis_title: Optional[str] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = True,
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded stacked bar chart.
@@ -1835,7 +1900,7 @@ class BWRPlots:
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
-        current_legend_y = legend_y if legend_y is not None else cfg_leg["default_y"]
+        current_legend_y = cfg_leg["y"] if show_legend else 0
         use_watermark_flag = (
             use_watermark if use_watermark is not None else cfg_wm["default_use"]
         )
@@ -1852,14 +1917,14 @@ class BWRPlots:
             if sort_descending is not None
             else cfg_plot.get("default_sort_descending", False)
         )
-        current_bar_mode = (
-            bar_mode if bar_mode is not None else cfg_plot.get("barmode", "stack")
-        )
 
         # --- Data Handling & Preparation ---
         plot_data = data.copy()
 
-        # Group data if requested and index is datetime
+        # Attempt index conversion
+        plot_data = self._ensure_datetime_index(plot_data)
+
+        # Group data if requested
         if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
             plot_data.index
         ):
@@ -1876,23 +1941,29 @@ class BWRPlots:
         # --- Determine Effective Date ---
         effective_date = date
         if effective_date is None and not plot_data.empty:
-            if pd.api.types.is_datetime64_any_dtype(plot_data.index):
+            if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
                     max_dt = plot_data.index.max()
                     effective_date = (
                         max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                     )
                 except Exception as e:
-                    effective_date = ""
-                    print(f"Warning: Could not automatically determine max date: {e}")
+                    effective_date = datetime.datetime.now().strftime(
+                        "%Y-%m-%d"
+                    )  # Default to today if error
+                    print(
+                        f"[Warning] stacked_bar: Could not automatically determine max date: {e}. Using today's date."
+                    )
             else:
-                effective_date = ""
+                effective_date = datetime.datetime.now().strftime(
+                    "%Y-%m-%d"
+                )  # Default to today's date if index isn't datetime
 
         # --- Figure Creation ---
         fig = make_subplots()
 
         # --- Axis Options & Scaling ---
-        local_axis_options = {} if axis_options is None else axis_options.copy()
+        local_axis_options = {}
 
         # Set Y-axis title if provided
         if y_axis_title is not None:
@@ -1952,7 +2023,7 @@ class BWRPlots:
         )
 
         # Update barmode (stack vs. relative)
-        fig.update_layout(barmode=current_bar_mode)
+        fig.update_layout(barmode=cfg_plot.get("barmode", "stack"))
 
         # --- Apply Layout & Axes ---
         self._apply_common_layout(

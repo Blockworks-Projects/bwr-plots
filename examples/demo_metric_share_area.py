@@ -1,5 +1,5 @@
 # examples/demo_metric_share_area.py
-import pandas as pd
+import os, pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
@@ -39,19 +39,48 @@ df_shares = pd.DataFrame(
     index=dates,
 )
 
+# Print debug info
+print("\n==== DEBUG DATA BEFORE NORMALIZATION ====")
+print(f"DataFrame shape: {df_shares.shape}")
+print(f"Column sums: {df_shares.sum().to_dict()}")
+for col in df_shares.columns:
+    print(
+        f"{col}: min={df_shares[col].min():.4f}, max={df_shares[col].max():.4f}, mean={df_shares[col].mean():.4f}"
+    )
+print("First few rows:")
+print(df_shares.head().to_string())
+print("==== END DEBUG DATA ====\n")
+
 df_shares = df_shares.div(df_shares.sum(axis=1), axis=0)
+
+# Print debug info after normalization
+print("\n==== DEBUG DATA AFTER NORMALIZATION ====")
+print(f"DataFrame shape: {df_shares.shape}")
+print(f"Row sums (should all be 1.0): {df_shares.sum(axis=1).head(5).to_dict()}")
+for col in df_shares.columns:
+    print(
+        f"{col}: min={df_shares[col].min():.4f}, max={df_shares[col].max():.4f}, mean={df_shares[col].mean():.4f}"
+    )
+print("First few rows:")
+print(df_shares.head().to_string())
+print("==== END DEBUG DATA ====\n")
+
 print("Synthetic data generated.")
+
+
+# --- Check for environment variable to open browser ---
+open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
 
 # --- Plotting ---
 print("Generating metric share area plot...")
 fig_metric = plotter.metric_share_area_plot(
     data=df_shares,
-    title="Simulated Market Share Over Time",
+    title="Metric Share Area Plot",
     subtitle="Percentage of Total Market by Product",
     source="Synthetic Data",
     save_image=True,
-    save_path=str(OUTPUT_DIR),  # Use corrected output path
-    open_in_browser=False,
+    save_path=str(OUTPUT_DIR),
+    open_in_browser=open_browser,
 )
 
 print(f"Metric share area plot HTML saved to '{OUTPUT_DIR}' directory.")

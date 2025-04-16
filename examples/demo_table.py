@@ -1,5 +1,5 @@
 # examples/demo_table.py
-import pandas as pd
+import os, pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
@@ -36,16 +36,20 @@ data_table = {
 df_table = pd.DataFrame(data_table)
 print("Synthetic data generated.")
 
+
+# --- Check for environment variable to open browser ---
+open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+
 # --- Plotting ---
 print("Generating table...")
 fig_table = plotter.table(
     data=df_table,
-    title="Quarterly Business Summary",
+    title="Table Chart",
     subtitle="Q3 vs Q4 2024 (Simulated Data)",
     source="Synthetic Data",
     save_image=True,
-    save_path=str(OUTPUT_DIR),  # Use corrected output path
-    open_in_browser=False,
+    save_path=str(OUTPUT_DIR),
+    open_in_browser=open_browser,
 )
 
 print(f"Table HTML saved to '{OUTPUT_DIR}' directory.")
