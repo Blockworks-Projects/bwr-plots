@@ -870,7 +870,6 @@ class BWRPlots:
                         y_values_for_range.extend(numeric_vals.tolist())
 
             if y_values_for_range:
-                from bwr_plots.utils import calculate_yaxis_grid_params
                 yaxis_params = calculate_yaxis_grid_params(
                     y_data=y_values_for_range,
                     padding=0.05,
