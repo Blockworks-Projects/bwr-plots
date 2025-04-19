@@ -11,9 +11,9 @@
       ".cursor",
       ".notes",
       ".repomix",
-      "bwr-brand_graphics",
+      "brand-assets",
+      "data",
       "output",
-      "ref",
       "resources",
       ".env",
       "repomix.config.json"

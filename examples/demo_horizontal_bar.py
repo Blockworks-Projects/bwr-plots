@@ -27,7 +27,15 @@ categories = [
     "Strategy E",
     "Tactic F",
 ]
-values = np.random.randint(-50, 100, size=len(categories)) * 1000
+
+# Ensure half the values are negative and half are positive
+num_categories = len(categories)
+half_point = num_categories // 2
+values = (
+    np.random.randint(-100, -10, size=half_point) * 1000
+).tolist()  # Ensure negative values
+values += (np.random.randint(10, 100, size=num_categories - half_point) * 1000).tolist()  # Ensure positive values
+
 df_hbar = pd.DataFrame({"label": categories, "performance": values})
 print("Synthetic data generated.")
 

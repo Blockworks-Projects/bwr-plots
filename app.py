@@ -280,13 +280,17 @@ if df is not None and plotter is not None:
                     prefix=y_prefix,
                     suffix=y_suffix,
                 )
-                st.plotly_chart(fig, use_container_width=True)
-                st.download_button(
-                    "Download PNG",
-                    fig.to_image(format="png"),
-                    file_name="bwr_plot.png",
-                    mime="image/png",
-                )
+                st.plotly_chart(fig, use_container_width=False)
+                try:
+                    html_string = fig.to_html(include_plotlyjs='cdn', full_html=True)
+                    st.download_button(
+                        label="Download HTML",
+                        data=html_string.encode('utf-8'),
+                        file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
+                        mime="text/html",
+                    )
+                except Exception as e:
+                    st.error(f"Could not generate HTML for download: {e}")
         else:
             st.info("Configure the chart first in Tab 1.")
 else:
