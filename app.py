@@ -240,73 +240,83 @@ plotter = st.session_state.get("plotter_instance", None)
 
 # --------- 2. Main workflow tabs ----------------------------------
 if df is not None and plotter is not None:
-    tabs = st.tabs(["🛠 Configure", "👁 Preview", "🚀 Generate"])
-    # ------------- TAB 1 – Configure --------------------------------
+    tabs = st.tabs(["⚙️ Configure & Generate", "👁 Preview"])
+
+    # ------------- TAB 1 – Configure & Generate ---------------------
     with tabs[0]:
         with st.form("config_form"):
-            with card("Plot settings"):
-                plot_type_display = st.selectbox(
-                    "Plot type",
-                    list(PLOT_TYPES.keys()),
-                    key="plot_type_selector",
-                )
-                index_col, column_mappings = render_dynamic_ui(df, plot_type_display)
-            with card("Styling"):
-                plot_title = st.text_input("Title", "My BWR Plot")
-                plot_subtitle = st.text_input(
-                    "Subtitle", "Generated from uploaded data"
-                )
-                plot_source = st.text_input("Data source text", "Uploaded Data")
-                y_prefix = st.text_input("Y-axis prefix", "")
-                y_suffix = st.text_input("Y-axis suffix", "")
-            submitted = st.form_submit_button("Apply changes")
-            if submitted:
-                st.session_state.config_ready = True
+            col1, col2 = st.columns(2)
+            # --- Column 1: Plot Settings ---
+            with col1:
+                with card("Plot settings"):
+                    plot_type_display = st.selectbox(
+                        "Plot type",
+                        list(PLOT_TYPES.keys()),
+                        key="plot_type_selector",
+                    )
+                    index_col, column_mappings = render_dynamic_ui(df, plot_type_display)
+            # --- Column 2: Styling ---
+            with col2:
+                with card("Styling"):
+                    plot_title = st.text_input("Title", "My BWR Plot")
+                    plot_subtitle = st.text_input(
+                        "Subtitle", "Generated from uploaded data"
+                    )
+                    plot_source = st.text_input("Data source text", "Uploaded Data")
+                    y_prefix = st.text_input("Y-axis prefix", "")
+                    y_suffix = st.text_input("Y-axis suffix", "")
+            # --- Form Submit Button (triggers plot generation) ---
+            submitted = st.form_submit_button("Generate Plot")
+
+        # --- Plot Generation and Display Area (Triggered by submit) ---
+        if submitted:
+            if (
+                'plot_type_display' in locals() and 'index_col' in locals() and 'column_mappings' in locals()
+                and plot_type_display is not None
+            ):
+                with st.spinner("Generating plot..."):
+                    try:
+                        fig = build_plot(
+                            df=df,
+                            plotter=plotter,
+                            plot_type_display=plot_type_display,
+                            index_col=index_col,
+                            column_mappings=column_mappings,
+                            title=plot_title,
+                            subtitle=plot_subtitle,
+                            source=plot_source,
+                            prefix=y_prefix,
+                            suffix=y_suffix,
+                        )
+                        if fig:
+                            try:
+                                html_string = fig.to_html(
+                                    include_plotlyjs='cdn',
+                                    full_html=True,
+                                    config={'displayModeBar': True}
+                                )
+                                plot_height = getattr(fig.layout, 'height', None) or 600
+                                component_height = plot_height + 30
+                                st_html(html_string, height=component_height, scrolling=True)
+                                st.download_button(
+                                    label="Download HTML",
+                                    data=html_string.encode('utf-8'),
+                                    file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
+                                    mime="text/html",
+                                )
+                            except Exception as e:
+                                st.error(f"Could not render or prepare plot HTML: {e}")
+                                traceback.print_exc()
+                        else:
+                            st.warning("Plot generation did not produce a figure.")
+                    except Exception as e:
+                        st.error("An error occurred during plot generation.")
+                        st.exception(e)
+            else:
+                st.warning("Configuration variables not found. Please ensure all settings are selected.")
+
     # ------------- TAB 2 – Preview ----------------------------------
     with tabs[1]:
         st.dataframe(df, use_container_width=True)
-    # ------------- TAB 3 – Generate ---------------------------------
-    with tabs[2]:
-        if st.session_state.get("config_ready"):
-            if st.button("Generate plot"):
-                fig = build_plot(
-                    df=df,
-                    plotter=plotter,
-                    plot_type_display=plot_type_display,
-                    index_col=index_col,
-                    column_mappings=column_mappings,
-                    title=plot_title,
-                    subtitle=plot_subtitle,
-                    source=plot_source,
-                    prefix=y_prefix,
-                    suffix=y_suffix,
-                )
-                if fig:
-                    try:
-                        # Generate HTML string from the figure object
-                        html_string = fig.to_html(
-                            include_plotlyjs='cdn',
-                            full_html=True,
-                            config={'displayModeBar': False}
-                        )
-                        # Get the height defined in the figure's layout, default to 600 if not set
-                        plot_height = getattr(fig.layout, 'height', None) or 600
-                        component_height = plot_height + 20  # Add buffer to avoid scrollbars inside component
-                        # Render the HTML using st_html (raw HTML)
-                        st_html(html_string, height=component_height, scrolling=True)
-                        # Download button for the same HTML
-                        st.download_button(
-                            label="Download HTML",
-                            data=html_string.encode('utf-8'),
-                            file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
-                            mime="text/html",
-                        )
-                    except Exception as e:
-                        st.error(f"Could not render or prepare plot HTML: {e}")
-                        traceback.print_exc()
-                else:
-                    st.warning("Plot generation did not produce a figure.")
-        else:
-            st.info("Configure the chart first in Tab 1.")
 else:
     st.info("⬅ Upload a file to get started!")

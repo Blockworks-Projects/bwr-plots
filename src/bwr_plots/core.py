@@ -584,6 +584,54 @@ class BWRPlots:
             tickvals=merged_options.get("x_tickvals", None),
         )
 
+        # Check if we need to correct the primary y-axis tick format
+        original_tick_format = merged_options.get("primary_tickformat")
+        tick_mode = merged_options.get("primary_tickmode")
+        dtick = merged_options.get("primary_dtick")
+        tick_range = merged_options.get("primary_range")
+        tick0 = merged_options.get("primary_tick0")
+
+        # Check if conditions for correction are met
+        if (original_tick_format == ",d" and
+                tick_mode == "linear" and
+                dtick is not None and dtick > 0 and
+                tick_range is not None and len(tick_range) == 2 and
+                tick0 is not None):
+            
+            # Generate numerical tick values based on tick0, dtick, and range
+            y_min, y_max = tick_range
+            numerical_ticks = []
+            
+            # Start from tick0 or the first multiple of dtick >= y_min that is also >= tick0
+            current_tick = tick0
+            if current_tick < y_min:
+                # Adjust start to the first tick mark within or at the start of the range
+                current_tick = tick0 + np.ceil((y_min - tick0) / dtick) * dtick
+
+            epsilon = dtick * 1e-9  # Tolerance for floating point comparisons
+            while current_tick <= y_max + epsilon:
+                # Only add ticks that are reasonably within the calculated range
+                if current_tick >= y_min - epsilon:
+                    numerical_ticks.append(current_tick)
+                current_tick += dtick
+
+            # Ensure the list is not empty if range is valid
+            if not numerical_ticks and y_min <= y_max:
+                # If calculation failed (e.g. due to extreme floating point issues), add min/max as fallback
+                numerical_ticks = [y_min, y_max]
+
+            # Simulate the ",d" formatting (rounding to nearest integer string)
+            try:
+                formatted_labels = [f"{int(np.round(t))}" for t in numerical_ticks]
+            except Exception:
+                # Handle potential errors if numerical_ticks isn't purely numeric
+                formatted_labels = [str(t) for t in numerical_ticks]  # Fallback
+
+            # Check for duplicates
+            if len(formatted_labels) > len(set(formatted_labels)):
+                # Duplicates detected, switch to decimal format
+                merged_options["primary_tickformat"] = ",.1f"
+
         fig.update_yaxes(
             title=dict(
                 text=merged_options["primary_title"],
