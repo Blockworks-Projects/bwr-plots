@@ -558,12 +558,13 @@ class BWRPlots:
             showgrid=cfg_axes["showgrid_x"],
             gridcolor=cfg_axes["gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
-            ticks=cfg_axes["ticks"],
-            tickwidth=cfg_axes["tickwidth"],
+            ticks="",              # Explicitly remove tick marks
+            tickwidth=0,           # Ensure tick marks have zero width
+            ticklen=0,             # Ensure tick marks have zero length
+            showline=False,        # Explicitly hide the main x-axis line
             nticks=merged_options["x_nticks"],
             tickformat=merged_options["x_tickformat"],
             tickfont=self._get_font_dict("tick"),
-            showline=False,  # Hide the default x-axis line to prevent duplication with y=0 zeroline
             linewidth=cfg_axes["linewidth"],
             zeroline=False,  # Ensure x-axis zeroline is always off
             zerolinewidth=0,
@@ -575,7 +576,6 @@ class BWRPlots:
             spikemode=cfg_axes["spikemode"],
             showticklabels=True,
             tickmode="auto",
-            ticklen=cfg_axes.get("x_ticklen", 5),
             range=merged_options["x_range"],
             visible=True,
             color="rgba(0,0,0,0)",

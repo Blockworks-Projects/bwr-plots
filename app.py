@@ -6,6 +6,7 @@ from io import StringIO, BytesIO
 import traceback
 from typing import Optional, Dict, Any, Tuple, List
 from contextlib import contextmanager
+from streamlit.components.v1 import html as st_html  # Added for raw HTML rendering
 
 # Assume bwr_plots is installed and import necessary components
 # Ensure the bwr_plots package is in the Python path or installed
@@ -280,17 +281,31 @@ if df is not None and plotter is not None:
                     prefix=y_prefix,
                     suffix=y_suffix,
                 )
-                st.plotly_chart(fig, use_container_width=False)
-                try:
-                    html_string = fig.to_html(include_plotlyjs='cdn', full_html=True)
-                    st.download_button(
-                        label="Download HTML",
-                        data=html_string.encode('utf-8'),
-                        file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
-                        mime="text/html",
-                    )
-                except Exception as e:
-                    st.error(f"Could not generate HTML for download: {e}")
+                if fig:
+                    try:
+                        # Generate HTML string from the figure object
+                        html_string = fig.to_html(
+                            include_plotlyjs='cdn',
+                            full_html=True,
+                            config={'displayModeBar': False}
+                        )
+                        # Get the height defined in the figure's layout, default to 600 if not set
+                        plot_height = getattr(fig.layout, 'height', None) or 600
+                        component_height = plot_height + 20  # Add buffer to avoid scrollbars inside component
+                        # Render the HTML using st_html (raw HTML)
+                        st_html(html_string, height=component_height, scrolling=True)
+                        # Download button for the same HTML
+                        st.download_button(
+                            label="Download HTML",
+                            data=html_string.encode('utf-8'),
+                            file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
+                            mime="text/html",
+                        )
+                    except Exception as e:
+                        st.error(f"Could not render or prepare plot HTML: {e}")
+                        traceback.print_exc()
+                else:
+                    st.warning("Plot generation did not produce a figure.")
         else:
             st.info("Configure the chart first in Tab 1.")
 else:
