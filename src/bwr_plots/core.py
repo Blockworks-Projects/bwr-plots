@@ -440,7 +440,7 @@ class BWRPlots:
         space_below = abs(min_neg_y * height) if min_neg_y < -0.05 else 0
         bottom_margin = max(cfg_layout["margin_b_min"], int(space_below) + 50)
 
-        top_margin = cfg_layout["margin_t_base"] + cfg_general["title_padding"]
+        top_margin = cfg_layout["margin_t_base"] + cfg_layout["title_padding"]
 
         if is_table:
             total_height = height
@@ -475,8 +475,8 @@ class BWRPlots:
             hoverdistance=cfg_layout["hoverdistance"] if not is_table else None,
             spikedistance=cfg_layout["spikedistance"] if not is_table else None,
             showlegend=show_legend,
-            plot_bgcolor=cfg_general["background_color"],
-            paper_bgcolor=cfg_general["background_color"],
+            plot_bgcolor=cfg_colors["background_color"],
+            paper_bgcolor=cfg_colors["background_color"],
             legend=(
                 dict(
                     font=self._get_font_dict("legend"),
@@ -549,22 +549,24 @@ class BWRPlots:
         if axis_options:
             merged_options.update(axis_options)
 
+        # Remove standoff from tickfont; add ticklabelstandoff directly to axis
         fig.update_xaxes(
             title=dict(
                 text=cfg_axes["x_title_text"], font=self._get_font_dict("axis_title")
             ),
-            linecolor=cfg_axes["linecolor"],
-            tickcolor=cfg_axes["tickcolor"],
+            linecolor=cfg_axes["y_gridcolor"],  # Use y-axis grid color for x-axis line
+            tickcolor=cfg_axes["y_gridcolor"],  # Use y-axis grid color for ticks
             showgrid=cfg_axes["showgrid_x"],
-            gridcolor=cfg_axes["gridcolor"],
+            gridcolor=cfg_axes["x_gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
-            ticks="",              # Explicitly remove tick marks
-            tickwidth=0,           # Ensure tick marks have zero width
-            ticklen=0,             # Ensure tick marks have zero length
-            showline=False,        # Explicitly hide the main x-axis line
+            ticks="outside",                  # Show outward ticks
+            tickwidth=cfg_axes["tickwidth"] * 1.5,  # Slightly thicker tick marks
+            ticklen=cfg_axes["x_ticklen"],    # Use configured tick length
+            showline=True,                     # Show the x-axis line
+            ticklabelstandoff=0,               # Decreased standoff for less padding
             nticks=merged_options["x_nticks"],
             tickformat=merged_options["x_tickformat"],
-            tickfont=self._get_font_dict("tick"),
+            tickfont=self._get_font_dict("tick"), # Use original font settings
             linewidth=cfg_axes["linewidth"],
             zeroline=False,  # Ensure x-axis zeroline is always off
             zerolinewidth=0,
@@ -584,54 +586,6 @@ class BWRPlots:
             tickvals=merged_options.get("x_tickvals", None),
         )
 
-        # Check if we need to correct the primary y-axis tick format
-        original_tick_format = merged_options.get("primary_tickformat")
-        tick_mode = merged_options.get("primary_tickmode")
-        dtick = merged_options.get("primary_dtick")
-        tick_range = merged_options.get("primary_range")
-        tick0 = merged_options.get("primary_tick0")
-
-        # Check if conditions for correction are met
-        if (original_tick_format == ",d" and
-                tick_mode == "linear" and
-                dtick is not None and dtick > 0 and
-                tick_range is not None and len(tick_range) == 2 and
-                tick0 is not None):
-            
-            # Generate numerical tick values based on tick0, dtick, and range
-            y_min, y_max = tick_range
-            numerical_ticks = []
-            
-            # Start from tick0 or the first multiple of dtick >= y_min that is also >= tick0
-            current_tick = tick0
-            if current_tick < y_min:
-                # Adjust start to the first tick mark within or at the start of the range
-                current_tick = tick0 + np.ceil((y_min - tick0) / dtick) * dtick
-
-            epsilon = dtick * 1e-9  # Tolerance for floating point comparisons
-            while current_tick <= y_max + epsilon:
-                # Only add ticks that are reasonably within the calculated range
-                if current_tick >= y_min - epsilon:
-                    numerical_ticks.append(current_tick)
-                current_tick += dtick
-
-            # Ensure the list is not empty if range is valid
-            if not numerical_ticks and y_min <= y_max:
-                # If calculation failed (e.g. due to extreme floating point issues), add min/max as fallback
-                numerical_ticks = [y_min, y_max]
-
-            # Simulate the ",d" formatting (rounding to nearest integer string)
-            try:
-                formatted_labels = [f"{int(np.round(t))}" for t in numerical_ticks]
-            except Exception:
-                # Handle potential errors if numerical_ticks isn't purely numeric
-                formatted_labels = [str(t) for t in numerical_ticks]  # Fallback
-
-            # Check for duplicates
-            if len(formatted_labels) > len(set(formatted_labels)):
-                # Duplicates detected, switch to decimal format
-                merged_options["primary_tickformat"] = ",.1f"
-
         fig.update_yaxes(
             title=dict(
                 text=merged_options["primary_title"],
@@ -641,7 +595,7 @@ class BWRPlots:
             ticksuffix=merged_options["primary_suffix"],
             tickfont=self._get_font_dict("tick"),
             showgrid=cfg_axes["showgrid_y"],
-            gridcolor=cfg_axes["gridcolor"],
+            gridcolor=cfg_axes["y_gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
             range=merged_options["primary_range"],
             tickformat=merged_options["primary_tickformat"],
@@ -673,7 +627,7 @@ class BWRPlots:
                 ticksuffix=merged_options["secondary_suffix"],
                 tickfont=self._get_font_dict("tick"),
                 showgrid=False,
-                gridcolor=cfg_axes["gridcolor"],
+                gridcolor=cfg_axes["y_gridcolor"],
                 gridwidth=cfg_axes.get("gridwidth", 1),
                 range=merged_options["secondary_range"],
                 tickformat=merged_options["secondary_tickformat"],
@@ -1655,6 +1609,7 @@ class BWRPlots:
         cfg_table = self.config["plot_specific"]["table"]
         cfg_colors = self.config["colors"]
         cfg_wm = self.config["watermark"]
+        cfg_layout = self.config["layout"]
 
         # --- Configure Watermark ---
         use_watermark_flag = (
@@ -1673,7 +1628,7 @@ class BWRPlots:
         # --- Table Height Calculation ---
         # Height is dynamic based on number of rows
         title_factor = cfg_table["title_height_adjust_factor"]
-        title_height = cfg_gen["title_padding"] * title_factor
+        title_height = cfg_layout["title_padding"] * title_factor
         row_height = cfg_table["row_height"]
         header_height = cfg_table["header_height"]
         footer_height = cfg_table["footer_height"]

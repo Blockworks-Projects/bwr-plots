@@ -1,6 +1,7 @@
 # This is the main app file for the BWR Plots Generator
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from io import StringIO, BytesIO
 import traceback
@@ -37,8 +38,7 @@ PLOT_TYPES = {
     "Scatter Plot": "scatter_plot",
     "Metric Share Area Plot": "metric_share_area_plot",
     "Bar Chart": "bar_chart",
-    "Multi Bar Chart": "multi_bar",
-    "Stacked Bar Chart": "stacked_bar_chart",
+    "Timeseries Bar Chart": "timeseries_bar_chart_placeholder",
     "Horizontal Bar Chart": "horizontal_bar",
     "Table": "table",
 }
@@ -46,8 +46,7 @@ PLOT_TYPES = {
 INDEX_REQUIRED_PLOTS = [
     "Scatter Plot",
     "Metric Share Area Plot",
-    "Multi Bar Chart",
-    "Stacked Bar Chart",
+    "Timeseries Bar Chart",
 ]
 # Plot types with specific column mapping needs
 COLUMN_MAPPING_PLOTS = {
@@ -125,10 +124,17 @@ def render_dynamic_ui(df: pd.DataFrame, plot_type_display: str):
     """
     Centralises the conditional widget logic so the main flow stays tidy.
     Returns:
-        index_col (Optional[str]), column_mappings (dict)
+        index_col (Optional[str]), column_mappings (dict), timeseries_bar_style (Optional[str]),
+        lookback_days (int), smoothing_window (int), resample_freq (str), resample_agg (str)
     """
     index_col = None
     column_mappings = {}
+    timeseries_bar_style = None  # Initialize style variable
+    lookback_days = 0
+    smoothing_window = 0
+    resample_freq = "<None>"
+    resample_agg = "sum"  # Default aggregation
+    
     # Time‑series index
     if plot_type_display in INDEX_REQUIRED_PLOTS:
         potential_date_col = find_potential_date_col(df)
@@ -140,8 +146,62 @@ def render_dynamic_ui(df: pd.DataFrame, plot_type_display: str):
             "Index (datetime)",
             options=col_options,
             index=default_index,
+            key=f"index_select_{plot_type_display}"  # Add key for potential state issues
         )
         index_col = None if index_col_selection == "<None>" else index_col_selection
+        
+        # --- Lookback Period ---
+        lookback_days = st.number_input(
+            "Lookback Period (days, 0=all)",
+            min_value=0,
+            step=1,
+            value=0,  # Default to 0 (all data)
+            key=f"lookback_{plot_type_display}",
+            help="Number of days of data to show, counting back from the latest date. 0 uses all available data.",
+        )
+    
+    # --- ADD CONDITIONAL UI FOR TIMESERIES BAR STYLE ---
+    if plot_type_display == "Timeseries Bar Chart":
+        timeseries_bar_style = st.radio(
+            "Bar Style",
+            options=["Grouped", "Stacked"],
+            key="timeseries_bar_style_radio",
+            horizontal=True,  # Makes radio buttons horizontal
+        )
+    # ----------------------------------------------------
+    
+    # --- Smoothing ---
+    smoothing_plot_types = ["Scatter Plot", "Metric Share Area Plot"]
+    if plot_type_display in smoothing_plot_types:
+        smoothing_window = st.number_input(
+            "Smoothing Window (days, 0=none)",
+            min_value=0,
+            step=1,
+            value=0,  # Default to 0 (no smoothing)
+            key=f"smoothing_{plot_type_display}",
+            help="Size of the moving average window (centered). 0 or 1 disables smoothing.",
+        )
+    
+    # --- Resampling ---
+    resampling_plot_types = ["Timeseries Bar Chart"]  # Currently only this one
+    if plot_type_display in resampling_plot_types:
+        st.markdown("##### Resampling")  # Optional sub-header
+        resample_freq = st.selectbox(
+            "Resample Frequency",
+            options=["<None>", "D", "W", "ME", "QE", "YE"],  # Use pandas offset aliases (ME=MonthEnd, etc.)
+            index=0,  # Default to <None>
+            key=f"resample_freq_{plot_type_display}",
+            help="Resample the data to a lower frequency before plotting. '<None>' uses original frequency.",
+        )
+        if resample_freq != "<None>":  # Only show aggregation if resampling is active
+            resample_agg = st.selectbox(
+                "Aggregation Method",
+                options=["sum", "mean", "median", "first", "last", "min", "max"],
+                index=0,  # Default to sum
+                key=f"resample_agg_{plot_type_display}",
+                help="How to aggregate data within each resampled period.",
+            )
+    
     # Column mapping
     if plot_type_display in COLUMN_MAPPING_PLOTS:
         mappings_needed = COLUMN_MAPPING_PLOTS[plot_type_display]
@@ -150,9 +210,11 @@ def render_dynamic_ui(df: pd.DataFrame, plot_type_display: str):
             column_mappings[key] = st.selectbox(
                 label,
                 options=col_options_no_none,
-                key=f"map_{key}",
+                key=f"map_{key}_{plot_type_display}",  # Add key
             )
-    return index_col, column_mappings
+    
+    # Return all values including the new transformation parameters
+    return index_col, column_mappings, timeseries_bar_style, lookback_days, smoothing_window, resample_freq, resample_agg
 
 
 def build_plot(
@@ -161,31 +223,128 @@ def build_plot(
     plot_type_display: str,
     index_col: str,
     column_mappings: dict,
+    timeseries_bar_style: Optional[str] = None,
+    lookback_days: Optional[int] = 0,
+    smoothing_window: Optional[int] = 0,
+    resample_freq: Optional[str] = None,
+    resample_agg: Optional[str] = 'sum',
     **styling_kwargs,
 ):
     """
     Isolates plotting + error handling; makes unit‑testing trivial.
     """
-    plot_args = dict(
-        data=df,
+    # Prepare base arguments (excluding data which might be modified)
+    plot_args_base = dict(
         **styling_kwargs,
         save_image=False,
         open_in_browser=False,
-        **column_mappings,
+        **column_mappings,  # Pass column mappings if needed
     )
-    # Set index if required
+
+    # Prepare data (handle index setting)
+    plot_data = df.copy()  # Start with a copy
     if plot_type_display in INDEX_REQUIRED_PLOTS and index_col:
-        df = df.copy()
-        df[index_col] = pd.to_datetime(df[index_col], errors="coerce")
-        df = df.dropna(subset=[index_col]).set_index(index_col).sort_index()
-        plot_args["data"] = df
-    plot_function = getattr(plotter, PLOT_TYPES[plot_type_display])
+        try:
+            plot_data[index_col] = pd.to_datetime(plot_data[index_col], errors='coerce')
+            plot_data = plot_data.dropna(subset=[index_col]).set_index(index_col).sort_index()
+            
+            # --- 1. Apply Lookback Filter ---
+            if lookback_days is not None and lookback_days > 0:
+                if isinstance(plot_data.index, pd.DatetimeIndex) and not plot_data.empty:
+                    try:
+                        latest_date = plot_data.index.max()
+                        start_date = latest_date - pd.Timedelta(days=lookback_days)
+                        plot_data = plot_data.loc[start_date:]  # Slice data from calculated start date
+                        st.info(f"Applied lookback: Showing data from {start_date.strftime('%Y-%m-%d')} to {latest_date.strftime('%Y-%m-%d')}.")
+                    except Exception as e:
+                        st.warning(f"Could not apply lookback filter: {e}")
+                else:
+                    st.warning("Lookback requires a valid DatetimeIndex.")
+            
+            # --- 2. Apply Resampling ---
+            resampling_plot_types = ["Timeseries Bar Chart"]  # Keep consistent with UI
+            if (resample_freq is not None and
+                resample_freq != '<None>' and
+                resample_agg is not None and
+                plot_type_display in resampling_plot_types):
+                if isinstance(plot_data.index, pd.DatetimeIndex) and not plot_data.empty:
+                    try:
+                        # Select only numeric columns for resampling aggregation
+                        numeric_cols = plot_data.select_dtypes(include=np.number).columns
+                        non_numeric_cols = plot_data.select_dtypes(exclude=np.number).columns
+
+                        # Resample numeric columns
+                        resampled_numeric = plot_data[numeric_cols].resample(resample_freq).agg(resample_agg)
+
+                        # Handle non-numeric columns (e.g., take the first or last value in the period)
+                        # For simplicity, we'll just drop them here, but you could customize
+                        # resampled_non_numeric = plot_data[non_numeric_cols].resample(resample_freq).first()
+
+                        plot_data = resampled_numeric  # Combine if needed: pd.concat([resampled_numeric, resampled_non_numeric], axis=1)
+
+                        st.info(f"Resampled data to frequency '{resample_freq}' using '{resample_agg}'.")
+                    except Exception as e:
+                        st.warning(f"Could not resample data: {e}")
+                else:
+                    st.warning("Resampling requires a valid DatetimeIndex.")
+            
+            # --- 3. Apply Smoothing ---
+            smoothing_plot_types = ["Scatter Plot", "Metric Share Area Plot"]  # Keep consistent with UI
+            if (smoothing_window is not None and
+                smoothing_window > 1 and  # Smoothing only makes sense for window > 1
+                plot_type_display in smoothing_plot_types):
+                if not plot_data.empty:
+                    try:
+                        numeric_cols = plot_data.select_dtypes(include=np.number).columns
+                        if not numeric_cols.empty:
+                            # Apply rolling mean only to numeric columns
+                            plot_data[numeric_cols] = plot_data[numeric_cols].rolling(
+                                window=smoothing_window,
+                                min_periods=1,  # Avoid NaNs at the start
+                                center=True     # Center the window for better visual alignment
+                            ).mean()
+                            st.info(f"Applied {smoothing_window}-day centered moving average smoothing.")
+                        else:
+                            st.warning("No numeric columns found to apply smoothing.")
+                    except Exception as e:
+                        st.warning(f"Could not apply smoothing: {e}")
+                else:
+                    st.warning("Cannot apply smoothing to empty data.")
+                    
+        except KeyError:
+            st.error(f"Selected index column '{index_col}' not found after potential data modifications.")
+            return None
+        except Exception as e:
+            st.error(f"Error processing index column '{index_col}': {e}")
+            return None
+
+    plot_args = {**plot_args_base, "data": plot_data}  # Add potentially modified data
+
     try:
+        # --- DYNAMIC FUNCTION CALL ---
+        if plot_type_display == "Timeseries Bar Chart":
+            if timeseries_bar_style == "Grouped":
+                plot_function = plotter.multi_bar  # Call multi_bar for Grouped
+            elif timeseries_bar_style == "Stacked":
+                plot_function = plotter.stacked_bar_chart  # Call stacked_bar_chart for Stacked
+            else:
+                st.error("Invalid Timeseries Bar Style selected.")
+                return None  # Or raise an error
+        else:
+            # Use the existing dictionary lookup for other plot types
+            func_name = PLOT_TYPES.get(plot_type_display)
+            if not func_name or not hasattr(plotter, func_name):
+                st.error(f"Plot type '{plot_type_display}' is not implemented correctly.")
+                return None
+            plot_function = getattr(plotter, func_name)
+        # ---------------------------
+
+        # Call the selected function
         return plot_function(**plot_args)
     except Exception as exc:
-        st.error("Plot generation failed:")
+        st.error(f"Plot generation failed for '{plot_type_display}':")
         st.exception(exc)
-        raise
+        return None  # Return None to prevent further errors downstream
 
 
 # --- Streamlit App ---
@@ -254,7 +413,7 @@ if df is not None and plotter is not None:
                         list(PLOT_TYPES.keys()),
                         key="plot_type_selector",
                     )
-                    index_col, column_mappings = render_dynamic_ui(df, plot_type_display)
+                    index_col, column_mappings, timeseries_bar_style, lookback_days, smoothing_window, resample_freq, resample_agg = render_dynamic_ui(df, plot_type_display)
             # --- Column 2: Styling ---
             with col2:
                 with card("Styling"):
@@ -272,6 +431,8 @@ if df is not None and plotter is not None:
         if submitted:
             if (
                 'plot_type_display' in locals() and 'index_col' in locals() and 'column_mappings' in locals()
+                # Check timeseries_bar_style exists if the plot type requires it
+                and (plot_type_display != "Timeseries Bar Chart" or 'timeseries_bar_style' in locals())
                 and plot_type_display is not None
             ):
                 with st.spinner("Generating plot..."):
@@ -282,6 +443,13 @@ if df is not None and plotter is not None:
                             plot_type_display=plot_type_display,
                             index_col=index_col,
                             column_mappings=column_mappings,
+                            # Pass the style choice
+                            timeseries_bar_style=timeseries_bar_style if plot_type_display == "Timeseries Bar Chart" else None,
+                            # Pass the new transformation parameters
+                            lookback_days=lookback_days,
+                            smoothing_window=smoothing_window,
+                            resample_freq=resample_freq,
+                            resample_agg=resample_agg,
                             title=plot_title,
                             subtitle=plot_subtitle,
                             source=plot_source,
