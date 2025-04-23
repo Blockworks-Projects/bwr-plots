@@ -38,7 +38,7 @@ print("Synthetic data generated.")
 
 
 # --- Check for environment variable to open browser ---
-open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "0") == "1"
+open_browser = True
 
 # --- Plotting ---
 print("Generating table...")
