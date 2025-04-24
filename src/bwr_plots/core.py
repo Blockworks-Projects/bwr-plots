@@ -28,6 +28,7 @@ from .charts.bar import _add_bar_traces
 from .charts.horizontal_bar import _add_horizontal_bar_traces
 from .charts.multi_bar import _add_multi_bar_traces
 from .charts.stacked_bar import _add_stacked_bar_traces
+from .charts.table import _add_plotly_table_trace
 from .table_config import get_default_watermark_table_options
 
 
@@ -2057,4 +2058,110 @@ class BWRPlots:
                 print(message)
         if open_in_browser:
             fig.show()
+        return fig
+
+    def table_plot(
+        self,
+        data: pd.DataFrame,
+        title: str = "",
+        subtitle: str = "",
+        source: str = "",
+        date: str = None,
+        height: int = None,
+        use_watermark: bool = None,
+        axis_options: dict = None,  # Unused, for API consistency
+        prefix: str = None,  # Unused
+        suffix: str = None,  # Unused
+        plot_area_b_padding: int = None,
+        save_image: bool = False,
+        save_path: str = None,
+        open_in_browser: bool = False,
+    ) -> go.Figure:
+        """
+        Create a branded Plotly table visualization from a DataFrame.
+
+        Args:
+            data: DataFrame to visualize.
+            title, subtitle, source, date: Metadata for the plot.
+            height: Figure height.
+            use_watermark: Whether to add watermark (default: config value).
+            axis_options, prefix, suffix: Unused for table, for API consistency.
+            plot_area_b_padding: Extra bottom padding.
+            save_image: If True, save as HTML.
+            save_path: Directory to save output.
+            open_in_browser: If True, open HTML after saving.
+        Returns:
+            Plotly Figure object.
+        """
+        # Validate input
+        if not isinstance(data, pd.DataFrame) or data.empty:
+            raise ValueError("Input data must be a non-empty pandas DataFrame.")
+
+        # Config slices
+        cfg_gen = self.config["general"]
+        cfg_plot = self.config["plot_specific"]
+        cfg_fonts = self.config["fonts"]
+        cfg_colors = self.config["colors"]
+        cfg_layout = self.config["layout"]
+        cfg_wm = self.config["watermark"]
+
+        # Effective date logic (as in other methods)
+        effective_date = date if date is not None else ""
+
+        # Create empty figure
+        fig = go.Figure()
+
+        # Add table trace
+        _add_plotly_table_trace(
+            fig,
+            data,
+            cfg_plot["table"],
+            cfg_fonts,
+            cfg_colors,
+            cfg_layout,
+        )
+
+        # Apply common layout (is_table=True for table-specific tweaks)
+        self._apply_common_layout(
+            fig,
+            title=title,
+            subtitle=subtitle,
+            height=height or cfg_gen.get("height", 1080),
+            show_legend=False,
+            legend_y=1.0,
+            source=source,
+            date=effective_date,
+            source_x=None,
+            source_y=None,
+            is_table=True,
+            plot_area_b_padding=plot_area_b_padding,
+        )
+
+        # Hide axes (not relevant for tables)
+        fig.update_layout(
+            xaxis=dict(visible=False, showgrid=False, zeroline=False),
+            yaxis=dict(visible=False, showgrid=False, zeroline=False),
+        )
+
+        # Watermark logic
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm.get("default_use", True)
+        )
+        if use_watermark_flag:
+            self._add_watermark(fig, is_table=True)
+
+        # Save/open logic
+        if save_image:
+            success, path_or_msg = save_plot_image(fig, title, save_path)
+            if open_in_browser and success:
+                import webbrowser
+                webbrowser.open(f"file://{path_or_msg}")
+        elif open_in_browser:
+            # Save to temp HTML and open
+            import tempfile
+            import webbrowser
+            with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+                fig.write_html(tmp.name, include_plotlyjs="cdn", full_html=True)
+                webbrowser.open(f"file://{tmp.name}")
+
         return fig

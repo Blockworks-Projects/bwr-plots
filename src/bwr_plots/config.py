@@ -41,6 +41,9 @@ DEFAULT_BWR_CONFIG = {
         "tick": {"size": 21.6, "color": "#ededed"},
         "legend": {"size": 24.0, "color": "#ededed"},
         "annotation": {"size": 17.4, "color": "#9f95c6"},
+        # Table-specific fonts (optional, fallback to title/tick if not present)
+        "table_header": {"size": 24, "color": "#ededed"},
+        "table_cell": {"size": 20, "color": "#ededed"},
     },
     "watermark": {
         "default_path": "brand-assets/bwr_white.svg",
@@ -94,6 +97,10 @@ DEFAULT_BWR_CONFIG = {
         "chart_source_y": 0.0,
         "chart_source_xanchor": "left",
         "chart_source_yanchor": "top",
+        "table_source_x": 0.0,
+        "table_source_y": -0.12,
+        "table_xanchor": "left",
+        "table_yanchor": "top",
     },
     "axes": {
         "linecolor": "rgb(38, 38, 38)",
@@ -181,6 +188,17 @@ DEFAULT_BWR_CONFIG = {
             "default_scale_values": True,
             "y_tickformat": ",.0f",
             "legend_marker_symbol": "circle",
+        },
+        # Table plot configuration
+        "table": {
+            "header_fill_color": "#5637cd",  # Use primary color
+            "cell_fill_color_odd": "#2a2a2a",  # Slightly off-background
+            "cell_fill_color_even": "#1A1A1A",  # Background color
+            "line_color": "#404040",  # Dark grey lines
+            "cell_height": 30,
+            # Font keys are optional; fallback logic in core.py
+            # "header_font_key": "table_header",
+            # "cell_font_key": "table_cell",
         },
     },
 }
