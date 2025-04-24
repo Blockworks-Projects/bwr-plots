@@ -594,7 +594,7 @@ if df is not None and plotter is not None:
                         if fig:
                             try:
                                 # Display Plotly chart
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, use_container_width=False) #ALWAYS KEEP AS FALSE
 
                                 # Add Download Button for HTML
                                 html_string = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})

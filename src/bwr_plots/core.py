@@ -520,6 +520,7 @@ class BWRPlots:
         fig: go.Figure,
         axis_options: Optional[Dict] = None,
         is_secondary: bool = False,
+        axis_min_calculated: Optional[float] = None,
     ) -> None:
         """
         Apply common X and Y axis styling to a figure.
@@ -556,23 +557,23 @@ class BWRPlots:
             title=dict(
                 text=cfg_axes["x_title_text"], font=self._get_font_dict("axis_title")
             ),
-            linecolor=cfg_axes["y_gridcolor"],  # Use y-axis grid color for x-axis line
+            showline=True,                     # Change: Make the axis line visible
+            linewidth=cfg_axes.get("gridwidth", 2.5), # Change: Use gridwidth for thickness
+            linecolor=cfg_axes.get("y_gridcolor", "rgb(38, 38, 38)"), # Change: Use grid color
             tickcolor=cfg_axes["y_gridcolor"],  # Use y-axis grid color for ticks
             showgrid=cfg_axes["showgrid_x"],
             gridcolor=cfg_axes["x_gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
-            ticks="outside",                  # Show outward ticks
-            tickwidth=cfg_axes["tickwidth"] * 1.5,  # Slightly thicker tick marks
-            ticklen=cfg_axes["x_ticklen"],    # Use configured tick length
-            showline=True,                     # Show the x-axis line
-            ticklabelstandoff=0,               # Decreased standoff for less padding
+            ticks="outside",
+            tickwidth=cfg_axes["tickwidth"] * 1.5,
+            ticklen=cfg_axes["x_ticklen"],
+            ticklabelstandoff=0,
             nticks=merged_options["x_nticks"],
             tickformat=merged_options["x_tickformat"],
-            tickfont=self._get_font_dict("tick"), # Use original font settings
-            linewidth=cfg_axes["linewidth"],
-            zeroline=False,  # Disable the zeroline for the primary Y-axis
-            zerolinewidth=0,  # Explicitly set width to 0
-            zerolinecolor='rgba(0,0,0,0)',  # Explicitly set color to transparent
+            tickfont=self._get_font_dict("tick"),
+            zeroline=False,
+            zerolinewidth=0,
+            zerolinecolor='rgba(0,0,0,0)',
             showspikes=cfg_axes["showspikes"],
             spikethickness=cfg_axes["spikethickness"],
             spikedash=cfg_axes["spikedash"],
@@ -583,7 +584,8 @@ class BWRPlots:
             range=merged_options["x_range"],
             visible=True,
             color="rgba(0,0,0,0)",
-            position=0,  # Keep x-axis at the bottom
+            anchor='free',
+            position=0,
             fixedrange=True,
             tickvals=merged_options.get("x_tickvals", None),
         )
@@ -608,9 +610,9 @@ class BWRPlots:
             tickwidth=0,
             showline=False,  # Hide the vertical y-axis line for cleaner look
             linewidth=cfg_axes["linewidth"],
-            zeroline=True,  # Ensure zeroline is True (it's the visual x-axis now)
-            zerolinewidth=cfg_axes["zerolinewidth"],
-            zerolinecolor=cfg_axes["zerolinecolor"],
+            zeroline=False,  # Disable the explicit Y-axis zero line
+            zerolinewidth=0,  # Explicitly set width to 0 for clarity
+            zerolinecolor='rgba(0,0,0,0)',  # Explicitly set color to transparent for clarity
             showticklabels=True,
             tickmode=merged_options.get("primary_tickmode", "auto"),
             tick0=merged_options.get("primary_tick0", None),
@@ -864,6 +866,7 @@ class BWRPlots:
 
         # --- Axis Range Calculation (based on scaled primary data) ---
         min_y, max_y = None, None
+        axis_min_calculated = None  # <--- ADD variable to store axis_min
         if scaled_primary_data is not None:
             y_values_for_range = []
             primary_numeric = scaled_primary_data.select_dtypes(include=np.number)
@@ -885,6 +888,7 @@ class BWRPlots:
                 local_axis_options["primary_tick0"] = yaxis_params["tick0"]
                 local_axis_options["primary_dtick"] = yaxis_params["dtick"]
                 local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                axis_min_calculated = yaxis_params["tick0"]  # <--- STORE axis_min
 
         # --- Prepare Secondary Data ---
         scaled_secondary_data = (
@@ -956,7 +960,12 @@ class BWRPlots:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options, is_secondary=has_secondary)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            is_secondary=has_secondary,
+            axis_min_calculated=axis_min_calculated
+        )
 
         # --- Debugging Output ---
         try:
@@ -1110,23 +1119,32 @@ class BWRPlots:
         local_axis_options = {} if axis_options is None else axis_options.copy()
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
-
         # Fix suffix and tickformat to avoid double % symbols
         if "primary_tickformat" not in local_axis_options:
             local_axis_options["primary_tickformat"] = cfg_plot.get(
                 "y_tickformat", ".0%"
             )
-
         if suffix is not None:
             local_axis_options["primary_suffix"] = suffix
         else:
             local_axis_options["primary_suffix"] = (
                 ""  # Empty suffix as format already has %
             )
-
         # Set y-axis range to 0-1 by default
         if "primary_range" not in local_axis_options:
             local_axis_options["primary_range"] = cfg_plot.get("y_range", [0, 1])
+        # --- Calculate y-axis grid params for bottom gridline ---
+        axis_min_calculated = None
+        yaxis_params = None
+        if not normalized_data.empty:
+            y_values_for_range = normalized_data.select_dtypes(include=np.number).values.flatten()
+            if y_values_for_range.size > 0:
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=y_values_for_range,
+                    padding=0.0,  # No extra padding for share plots
+                    num_gridlines=5
+                )
+                axis_min_calculated = yaxis_params["tick0"]
 
         # --- Ensure first and last x-tick are always shown ---
         if not normalized_data.empty and isinstance(normalized_data.index, pd.DatetimeIndex):
@@ -1161,7 +1179,11 @@ class BWRPlots:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            axis_min_calculated=axis_min_calculated
+        )
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1318,6 +1340,22 @@ class BWRPlots:
                     print(f"Warning: Could not scale data: {e}.")
                     scaled_data = plot_data.copy()  # Revert to original on error
 
+            # --- Calculate y-axis grid params for bottom gridline ---
+            axis_min_calculated = None
+            yaxis_params = None
+            y_values_for_range = []
+            if isinstance(scaled_data, pd.DataFrame):
+                y_values_for_range = scaled_data.select_dtypes(include=np.number).values.flatten()
+            elif isinstance(scaled_data, pd.Series):
+                y_values_for_range = scaled_data.values.flatten()
+            if y_values_for_range is not None and len(y_values_for_range) > 0:
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=y_values_for_range,
+                    padding=0.05,
+                    num_gridlines=5
+                )
+                axis_min_calculated = yaxis_params["tick0"]
+
             # --- Call the Chart Function ---
             _add_bar_traces(
                 fig=fig,
@@ -1340,7 +1378,11 @@ class BWRPlots:
             None,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            axis_min_calculated=axis_min_calculated
+        )
 
         # Update layout with bargap
         fig.update_layout(bargap=cfg_plot["bargap"])
@@ -1543,7 +1585,11 @@ class BWRPlots:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            axis_min_calculated=None
+        )
 
         # Additional Y-axis settings for horizontal bar chart
         fig.update_yaxes(
@@ -1705,20 +1751,19 @@ class BWRPlots:
             local_axis_options["primary_prefix"] = prefix
 
         # Only scale if requested
+        axis_min_calculated = None
+        yaxis_params = None
         if current_scale:
             # Find max value for scaling
             numeric_data = plot_data.select_dtypes(include=np.number)
             if not numeric_data.empty:
                 max_value = numeric_data.max().max(skipna=True)
-
                 scale = 1
                 auto_suffix = ""
                 if pd.notna(max_value):
                     scale, auto_suffix = _get_scale_and_suffix(max_value)
-
                 final_suffix = suffix if suffix is not None else auto_suffix
                 local_axis_options["primary_suffix"] = final_suffix
-
                 # Scale data
                 if scale > 1:
                     try:
@@ -1728,6 +1773,15 @@ class BWRPlots:
                         plot_data[numeric_cols] = plot_data[numeric_cols] / scale
                     except Exception as e:
                         print(f"Warning: Could not scale data: {e}.")
+                # --- Calculate y-axis grid params for bottom gridline ---
+                y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
+                if y_values_for_range.size > 0:
+                    yaxis_params = calculate_yaxis_grid_params(
+                        y_data=y_values_for_range,
+                        padding=0.05,
+                        num_gridlines=5
+                    )
+                    axis_min_calculated = yaxis_params["tick0"]
             else:
                 if suffix is not None:
                     local_axis_options["primary_suffix"] = suffix
@@ -1760,7 +1814,11 @@ class BWRPlots:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            axis_min_calculated=axis_min_calculated
+        )
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1794,6 +1852,7 @@ class BWRPlots:
         y_axis_title: Optional[str] = None,
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
+        axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
@@ -1902,33 +1961,27 @@ class BWRPlots:
         fig = make_subplots()
 
         # --- Axis Options & Scaling ---
-        local_axis_options = {}
+        local_axis_options = {} if axis_options is None else axis_options.copy()
+        if prefix is not None:
+            local_axis_options["primary_prefix"] = prefix
 
         # Set Y-axis title if provided
         if y_axis_title is not None:
             local_axis_options["primary_title"] = y_axis_title
 
-        if prefix is not None:
-            local_axis_options["primary_prefix"] = prefix
-
-        # Scaling values if requested
+        axis_min_calculated = None
+        yaxis_params = None
+        # Only scale if requested
         if current_scale:
-            # Find max value for scaling
             numeric_data = plot_data.select_dtypes(include=np.number)
             if not numeric_data.empty:
-                # For stacked bars, we should consider the sum of columns by row
-                # This gives the actual maximum displayed value on the y-axis
-                row_sums = numeric_data.sum(axis=1)
-                max_value = row_sums.max(skipna=True)
-
+                max_value = numeric_data.max().max(skipna=True)
                 scale = 1
                 auto_suffix = ""
                 if pd.notna(max_value):
                     scale, auto_suffix = _get_scale_and_suffix(max_value)
-
                 final_suffix = suffix if suffix is not None else auto_suffix
                 local_axis_options["primary_suffix"] = final_suffix
-
                 # Scale data
                 if scale > 1:
                     try:
@@ -1938,6 +1991,15 @@ class BWRPlots:
                         plot_data[numeric_cols] = plot_data[numeric_cols] / scale
                     except Exception as e:
                         print(f"Warning: Could not scale data: {e}.")
+                # --- Calculate y-axis grid params for bottom gridline ---
+                y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
+                if y_values_for_range.size > 0:
+                    yaxis_params = calculate_yaxis_grid_params(
+                        y_data=y_values_for_range,
+                        padding=0.05,
+                        num_gridlines=5
+                    )
+                    axis_min_calculated = yaxis_params["tick0"]
             else:
                 if suffix is not None:
                     local_axis_options["primary_suffix"] = suffix
@@ -1978,7 +2040,11 @@ class BWRPlots:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options)
+        self._apply_common_axes(
+            fig,
+            local_axis_options,
+            axis_min_calculated=axis_min_calculated
+        )
 
         # --- Add Watermark ---
         if use_watermark_flag:
