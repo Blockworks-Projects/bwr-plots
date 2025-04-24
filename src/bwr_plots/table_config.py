@@ -6,13 +6,14 @@ from st_aggrid import GridOptionsBuilder, JsCode
 
 # --- Default Grid Options ---
 DEFAULT_GRID_OPTIONS = {
-    "domLayout": "normal",  # 'autoHeight' might also be useful
+    "domLayout": "autoHeight",  # Changed from 'normal' to 'autoHeight' for screenshot-friendly height
     "defaultColDef": {
         "sortable": True,
         "filter": True,
         "resizable": True,
         "editable": False, # Default to not editable
         "floatingFilter": True, # Add filter boxes below headers
+        "flex": 1, # Added to make columns fill available width
     },
     "pagination": True,
     "paginationPageSize": 15, # Sensible default page size
@@ -25,7 +26,7 @@ DEFAULT_GRID_OPTIONS = {
 
 # --- Default AG-Grid Call Parameters ---
 DEFAULT_AGGRID_PARAMS = {
-    "height": 500, # Default height, can be overridden
+    # "height": 500, # Removed to allow autoHeight to control table height
     "width": "100%",
     "reload_data": True,
     "update_mode": "MODEL_CHANGED", # How updates are sent back (if editable)

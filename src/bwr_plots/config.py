@@ -41,7 +41,6 @@ DEFAULT_BWR_CONFIG = {
         "tick": {"size": 21.6, "color": "#ededed"},
         "legend": {"size": 24.0, "color": "#ededed"},
         "annotation": {"size": 17.4, "color": "#9f95c6"},
-        # Removed: hbar_text, table_header, table_cell, family, source, watermark
     },
     "watermark": {
         "default_path": "brand-assets/bwr_white.svg",
@@ -149,11 +148,9 @@ DEFAULT_BWR_CONFIG = {
             "y_tickformat": ".0%",
             "y_range": [0, 1],
             "legend_marker_symbol": "circle",
-            # Removed: mode, fill, hover_template (overridden in code)
         },
         "bar": {
             "bargap": 0.15,
-            # Removed: default_group_days (not referenced)
         },
         "horizontal_bar": {
             "orientation": "h",
@@ -187,7 +184,6 @@ DEFAULT_BWR_CONFIG = {
         },
     },
 }
-# Note: Output images are saved to './output/' by default if save_path is not provided in plotting methods.
 
 def get_default_config():
     """Returns a deep copy of the default configuration"""

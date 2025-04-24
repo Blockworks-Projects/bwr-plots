@@ -20,6 +20,9 @@ def render_aggrid_table(
     grid_options_override: Optional[Dict[str, Any]] = None,
     aggrid_params_override: Optional[Dict[str, Any]] = None,
     column_defs_override: Optional[Dict[str, Any]] = None,
+    title: Optional[str] = None,
+    subtitle: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> AgGridReturn:
     """
     Renders an AG-Grid table in Streamlit using configured defaults
@@ -30,6 +33,9 @@ def render_aggrid_table(
         grid_options_override: Dictionary to override default grid options.
         aggrid_params_override: Dictionary to override parameters passed to AgGrid call.
         column_defs_override: Dictionary defining specific column behaviors, overriding defaults.
+        title: Optional title for the table.
+        subtitle: Optional subtitle for the table.
+        source: Optional source information for the table.
 
     Returns:
         The return value from the AgGrid call, which contains grid state information.
@@ -37,6 +43,12 @@ def render_aggrid_table(
     if df is None or df.empty:
         st.warning("No data provided for the table.")
         return None # Or handle as appropriate
+
+    # Render title and subtitle if provided
+    if title:
+        st.markdown(f"**{title}**")
+    if subtitle:
+        st.markdown(f"*{subtitle}*", unsafe_allow_html=True)
 
     # --- Configuration Merging ---
     grid_options_defaults = get_default_grid_options()
@@ -96,6 +108,10 @@ def render_aggrid_table(
         key=final_aggrid_params.get("key", "aggrid_table"),
         custom_css=final_aggrid_params.get("custom_css", {}),
     )
+
+    # Render source if provided
+    if source:
+        st.markdown(f"***Source:*** {source}")
 
     return grid_response
 
