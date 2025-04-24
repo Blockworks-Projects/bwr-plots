@@ -108,4 +108,20 @@ def get_default_aggrid_params():
 
 def get_default_column_definitions():
     """Returns a copy of the default column definitions."""
-    return DEFAULT_COLUMN_DEFINITIONS.copy() 
+    return DEFAULT_COLUMN_DEFINITIONS.copy()
+
+def DEFAULT_WATERMARK_TABLE_OPTIONS():
+    return {
+        "x": 0.0,
+        "y": 0.2,
+        "sizex": 0.3,
+        "sizey": 0.3,
+        "opacity": 1.0,
+        "layer": "above",
+        "xanchor": "left",
+        "yanchor": "top",
+    }
+
+def get_default_watermark_table_options():
+    """Returns a copy of the default watermark options specific to tables."""
+    return DEFAULT_WATERMARK_TABLE_OPTIONS().copy() 

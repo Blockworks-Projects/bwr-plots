@@ -31,7 +31,6 @@ DEFAULT_BWR_CONFIG = {
             "#bcbd22",
             "#17becf",
         ],
-        # Removed: secondary, tertiary, accent1, accent2, neutral1, neutral2, dark1, dark2, highlight, subtitle, gridline, axis_line, zeroline, spike_line, table_header_fill, table_header_font, table_cell_line, table_cell_fill_even, table_cell_fill_odd, brand_primary, brand_secondary, brand_text, bg_color, grid_color, title_color, subtitle_color, axis_color, annotation_color, plot_line1-10, plot_fill1-10
     },
     "fonts": {
         "normal_family": "Maison Neue, Inter, sans-serif",
@@ -49,22 +48,11 @@ DEFAULT_BWR_CONFIG = {
         "default_use": True,
         "chart_opacity": 1,
         "chart_layer": "above",
-        "table_x": 0.0,
-        "table_y": 0.2,
-        "table_sizex": 0.3,
-        "table_sizey": 0.3,
-        "table_opacity": 1.0,
-        "table_layer": "above",
-        "table_xanchor": "left",
-        "table_yanchor": "top",
-        # Use the final (non-duplicate) chart_* values
-        "chart_x": 0.98,
-        "chart_y": 0.02,
-        "chart_sizex": 0.12,
-        "chart_sizey": 0.12,
+        "chart_x": 1.012,
+        "chart_y": 1.275,
+        "chart_sizex": 0.20,
+        "chart_sizey": 0.20,
         "chart_xanchor": "right",
-        "chart_yanchor": "bottom",
-        # Removed: duplicate chart_* keys, default_type, default_text, default_image_path
     },
     "layout": {
         "margin_l": 120,
@@ -111,13 +99,13 @@ DEFAULT_BWR_CONFIG = {
     "axes": {
         "linecolor": "#E9EAEB",
         "tickcolor": "#d1d5db",
-        "gridcolor": "#2a2a2a",
+        "gridcolor": "#262626",
         "showgrid_x": False,
         "showgrid_y": True,
         "ticks": "outside",
-        "tickwidth": 1.2,
+        "tickwidth": 2,
         "showline": True,
-        "linewidth": 1.8,
+        "linewidth": 2.5,
         "zeroline": True,
         "zerolinewidth": 1.8,
         "zerolinecolor": "#adb0b5",
@@ -140,10 +128,10 @@ DEFAULT_BWR_CONFIG = {
         "y_secondary_ticksuffix": "",
         "y_secondary_tickprefix": "",
         "y_secondary_range": None,
-        "gridwidth": 1.8,
+        "gridwidth": 2.5,
         "y_showgrid": True,
-        "y_gridcolor": "#404040",
-        "x_gridcolor": "#404040",
+        "y_gridcolor": "rgb(38, 38, 38)",
+        "x_gridcolor": "rgb(38, 38, 38)",
         "titlefont_size": 14.4,
         "titlefont_color": "#adb0b5",
     },
@@ -176,7 +164,6 @@ DEFAULT_BWR_CONFIG = {
             "bar_height": 0.7,
             "bargap": 0.15,
             "yaxis_automargin": True,
-            # Removed: xaxis_ticksuffix_auto, uniformtext_mode, uniformtext_minsize (not referenced)
         },
         "multi_bar": {
             "default_scale_values": True,
@@ -188,7 +175,6 @@ DEFAULT_BWR_CONFIG = {
             "orientation": "v",
             "textposition": "outside",
             "legend_marker_symbol": "circle",
-            # Removed: default_group_days (not referenced)
         },
         "stacked_bar": {
             "default_sort_descending": False,
@@ -198,7 +184,6 @@ DEFAULT_BWR_CONFIG = {
             "default_scale_values": True,
             "y_tickformat": ",.0f",
             "legend_marker_symbol": "circle",
-            # Removed: default_group_days (not referenced)
         },
     },
 }

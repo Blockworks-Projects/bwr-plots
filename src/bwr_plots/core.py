@@ -28,6 +28,7 @@ from .charts.bar import _add_bar_traces
 from .charts.horizontal_bar import _add_horizontal_bar_traces
 from .charts.multi_bar import _add_multi_bar_traces
 from .charts.stacked_bar import _add_stacked_bar_traces
+from .table_config import get_default_watermark_table_options
 
 
 # Utility function to generate safe filenames from titles
@@ -454,7 +455,9 @@ class BWRPlots:
                 total_height = adjusted_plot_height + top_margin + bottom_margin
 
         subtitle_font = cfg_fonts["subtitle"]
-        subtitle_color = subtitle_font.get("color", cfg_colors["subtitle"])
+        # Default to the color defined in the fonts config for subtitle,
+        # with a final hardcoded fallback just in case.
+        subtitle_color = subtitle_font.get("color", cfg_fonts["subtitle"].get("color", "#adb0b5"))
         subtitle_size = subtitle_font.get("size", 15)
 
         fig.update_layout(
@@ -567,9 +570,9 @@ class BWRPlots:
             tickformat=merged_options["x_tickformat"],
             tickfont=self._get_font_dict("tick"), # Use original font settings
             linewidth=cfg_axes["linewidth"],
-            zeroline=False,  # Ensure x-axis zeroline is always off
-            zerolinewidth=0,
-            zerolinecolor="rgba(0,0,0,0)",
+            zeroline=False,  # Disable the zeroline for the primary Y-axis
+            zerolinewidth=0,  # Explicitly set width to 0
+            zerolinecolor='rgba(0,0,0,0)',  # Explicitly set color to transparent
             showspikes=cfg_axes["showspikes"],
             spikethickness=cfg_axes["spikethickness"],
             spikedash=cfg_axes["spikedash"],
@@ -658,11 +661,13 @@ class BWRPlots:
         if use_watermark and self.watermark:
             cfg_wm = self.config["watermark"]
             if is_table:
-                x, y = cfg_wm["table_x"], cfg_wm["table_y"]
-                sx, sy = cfg_wm["table_sizex"], cfg_wm["table_sizey"]
-                op, lay = cfg_wm["table_opacity"], cfg_wm["table_layer"]
-                xanchor = cfg_wm.get("table_xanchor", "left")
-                yanchor = cfg_wm.get("table_yanchor", "top")
+                # Fetch table-specific watermark options
+                cfg_wm_table = get_default_watermark_table_options()
+                x, y = cfg_wm_table["x"], cfg_wm_table["y"]
+                sx, sy = cfg_wm_table["sizex"], cfg_wm_table["sizey"]
+                op, lay = cfg_wm_table["opacity"], cfg_wm_table["layer"]
+                xanchor = cfg_wm_table.get("xanchor", "left")
+                yanchor = cfg_wm_table.get("yanchor", "top")
             else:
                 x, y = cfg_wm["chart_x"], cfg_wm["chart_y"]
                 sx, sy = cfg_wm["chart_sizex"], cfg_wm["chart_sizey"]

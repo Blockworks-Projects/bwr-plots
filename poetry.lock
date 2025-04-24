@@ -567,11 +567,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=1.22.4", markers = "python_version < \"3.11\""},
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-]
+numpy = {version = ">=1.26.0", markers = "python_version >= \"3.12\""}
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
 tzdata = ">=2022.7"
@@ -1079,20 +1075,20 @@ snowflake = ["snowflake-connector-python (>=3.3.0) ; python_version < \"3.12\"",
 
 [[package]]
 name = "streamlit-aggrid"
-version = "1.1.4"
+version = "0.3.4.post3"
 description = "Streamlit component implementation of ag-grid"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "streamlit_aggrid-1.1.4-py3-none-any.whl", hash = "sha256:37148653488e286fcfb44fb8bb20345bb1fdfe7af6833f05f77fc72ce244b5d8"},
-    {file = "streamlit_aggrid-1.1.4.tar.gz", hash = "sha256:cbc1f7ad15f25df3fc3ff17c4afd74df7accdd01ee3fea550a74c8c049338ea7"},
+    {file = "streamlit-aggrid-0.3.4.post3.tar.gz", hash = "sha256:0cb9332199e7735289a673efabc913e1a3466cc188bc025bec2c50c32ab1989a"},
+    {file = "streamlit_aggrid-0.3.4.post3-py3-none-any.whl", hash = "sha256:b909117eb90cfdb855b1c74e694e9ec97554c101baaafb7339eaf885d1f4e49c"},
 ]
 
 [package.dependencies]
-pandas = ">=1.4.0"
-python-decouple = "*"
-streamlit = ">=1.2"
+pandas = ">=1.2"
+python-decouple = ">=3.6,<4.0"
+streamlit = ">=0.87.0"
 
 [[package]]
 name = "tenacity"
@@ -1246,5 +1242,5 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.10"
-content-hash = "14f1c38df073014db31b29e53095cae2b57d54c0024cbd376b25a47c81e75d13"
+python-versions = "^3.12"
+content-hash = "3e4074c08d7c52a82d83277e84bf66ed4aedb25043564c24e5d01e36a7e033f3"

@@ -3,23 +3,23 @@ name = "bwr-plots"
 version = "0.1.0"
 description = "Blockworks Research Plotting Library"
 authors = [
-    {name = "Daniel",email = "daniel.shapiro@blockworks.co"}
+    {name = "Daniel", email = "daniel.shapiro@blockworks.co"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+# Change this line to target Python 3.12 and compatible versions
+requires-python = "^3.12"
 dependencies = [
     "pandas>=2.0.0",
     "plotly>=5.10.0",
     "numpy>=1.20.0",
     "termcolor>=1.1.0",
     "streamlit>=1.4.1,<2.0.0",
-    "streamlit-aggrid>=0.3.4.post3",
-    "openpyxl (>=3.1.5,<4.0.0)"
+    "openpyxl>=3.1.5,<4.0.0",
+    "streamlit-aggrid==0.3.4.post3"
 ]
 
 [tool.poetry]
 packages = [{include = "bwr_plots", from = "src"}]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

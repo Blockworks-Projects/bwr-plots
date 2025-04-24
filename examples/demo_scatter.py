@@ -54,8 +54,8 @@ open_browser = os.environ.get("BWR_PLOTS_OPEN_BROWSER", "1") == "1"
 print("Generating scatter plot...")
 fig_scatter = plotter.scatter_plot(
     data=df_plot,
-    title="Scatter Plot",
-    subtitle="Comparing Uniswap and Aave TVL (Simulated Data)",
+    title="SOL Performance vs. BTC and ETH",
+    subtitle="SOL has underperformed BTC year-to-date despite its higher risk profile, though it has outperformed ETH by 20%.",
     source="Test Data CSV",
     prefix="$",
     save_image=True,
