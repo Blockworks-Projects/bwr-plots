@@ -3,7 +3,7 @@ name = "bwr-plots"
 version = "0.1.0"
 description = "Blockworks Research Plotting Library"
 authors = [
-    {name = "Daniel",email = "dan.shapiro47@gmail.com"}
+    {name = "Daniel",email = "daniel.shapiro@blockworks.co"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,7 +13,8 @@ dependencies = [
     "numpy>=1.20.0",
     "termcolor>=1.1.0",
     "streamlit>=1.4.1,<2.0.0",
-    "streamlit-aggrid>=0.3.4.post3"
+    "streamlit-aggrid>=0.3.4.post3",
+    "openpyxl (>=3.1.5,<4.0.0)"
 ]
 
 [tool.poetry]
