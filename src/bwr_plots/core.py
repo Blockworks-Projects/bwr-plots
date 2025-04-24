@@ -12,6 +12,9 @@ import time
 import sys
 import io
 from typing import Dict, List, Optional, Union, Tuple, Any
+import math
+from termcolor import colored
+import json
 
 # --- Relative Imports ---
 from .config import DEFAULT_BWR_CONFIG
@@ -591,6 +594,26 @@ class BWRPlots:
             tickvals=merged_options.get("x_tickvals", None),
         )
 
+        # --- Tickformat override logic for primary y-axis ---
+        primary_tickformat = merged_options["primary_tickformat"]
+        primary_dtick = merged_options.get("primary_dtick", None)
+        primary_tick0 = merged_options.get("primary_tick0", None)
+        primary_tickmode = merged_options.get("primary_tickmode", "auto")
+        # === START MODIFICATION ===
+        if primary_dtick is not None:
+            primary_tickmode = 'linear'  # FORCE linear mode when dtick is set
+            # Check if dtick is fractional
+            if isinstance(primary_dtick, (float, int)) and primary_dtick % 1 != 0:
+                # If fractional, ensure format supports decimals. Override common integer formats.
+                if primary_tickformat in [",d", ",.0f", "d", ".0f"]:
+                    adjusted_primary_tickformat = ",.2f"
+                    try:
+                        from termcolor import colored
+                        print(colored(f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'.", "yellow"))
+                    except ImportError:
+                        print(f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'.")
+                    primary_tickformat = adjusted_primary_tickformat
+        # === END MODIFICATION ===
         fig.update_yaxes(
             title=dict(
                 text=merged_options["primary_title"],
@@ -603,7 +626,7 @@ class BWRPlots:
             gridcolor=cfg_axes["y_gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
             range=merged_options["primary_range"],
-            tickformat=merged_options["primary_tickformat"],
+            tickformat=primary_tickformat,  # Use potentially adjusted format
             secondary_y=False,
             linecolor=cfg_axes["linecolor"],
             tickcolor="rgba(0,0,0,0)",
@@ -615,14 +638,34 @@ class BWRPlots:
             zerolinewidth=0,  # Explicitly set width to 0 for clarity
             zerolinecolor='rgba(0,0,0,0)',  # Explicitly set color to transparent for clarity
             showticklabels=True,
-            tickmode=merged_options.get("primary_tickmode", "auto"),
-            tick0=merged_options.get("primary_tick0", None),
-            dtick=merged_options.get("primary_dtick", None),
+            # === MODIFICATION: Apply tickmode, tick0, dtick ===
+            tickmode=primary_tickmode,  # Apply potentially forced 'linear' mode
+            tick0=primary_tick0,  # Apply calculated tick0
+            dtick=primary_dtick,  # Apply calculated dtick
+            # =============================================
             ticklen=0,
             fixedrange=True,
         )
 
         if is_secondary:
+            # --- Tickformat override logic for secondary y-axis ---
+            secondary_tickformat = merged_options["secondary_tickformat"]
+            secondary_dtick = merged_options.get("secondary_dtick", None)
+            secondary_tick0 = merged_options.get("secondary_tick0", None)
+            secondary_tickmode = merged_options.get("secondary_tickmode", "auto")
+            # === START MODIFICATION (Secondary Axis) ===
+            if secondary_dtick is not None:
+                secondary_tickmode = 'linear'  # FORCE linear mode
+                if isinstance(secondary_dtick, (float, int)) and secondary_dtick % 1 != 0:
+                    if secondary_tickformat in [",d", ",.0f", "d", ".0f"]:
+                        adjusted_secondary_tickformat = ",.2f"
+                        try:
+                            from termcolor import colored
+                            print(colored(f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'.", "yellow"))
+                        except ImportError:
+                            print(f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'.")
+                        secondary_tickformat = adjusted_secondary_tickformat
+            # === END MODIFICATION (Secondary Axis) ===
             fig.update_yaxes(
                 title=dict(
                     text=merged_options["secondary_title"],
@@ -635,7 +678,7 @@ class BWRPlots:
                 gridcolor=cfg_axes["y_gridcolor"],
                 gridwidth=cfg_axes.get("gridwidth", 1),
                 range=merged_options["secondary_range"],
-                tickformat=merged_options["secondary_tickformat"],
+                tickformat=secondary_tickformat,  # Use potentially adjusted format
                 secondary_y=True,
                 linecolor=cfg_axes["linecolor"],
                 tickcolor="rgba(0,0,0,0)",
@@ -647,7 +690,11 @@ class BWRPlots:
                 zerolinewidth=cfg_axes["zerolinewidth"],
                 zerolinecolor=cfg_axes["zerolinecolor"],
                 showticklabels=True,
-                tickmode="auto",
+                # === MODIFICATION: Apply tickmode, tick0, dtick ===
+                tickmode=secondary_tickmode,  # Apply potentially forced 'linear' mode
+                tick0=secondary_tick0,  # Apply calculated tick0
+                dtick=secondary_dtick,  # Apply calculated dtick
+                # =============================================
                 ticklen=0,
                 fixedrange=True,
             )
@@ -1146,6 +1193,11 @@ class BWRPlots:
                     num_gridlines=5
                 )
                 axis_min_calculated = yaxis_params["tick0"]
+                # --- Add yaxis_params to local_axis_options ---
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
 
         # --- Ensure first and last x-tick are always shown ---
         if not normalized_data.empty and isinstance(normalized_data.index, pd.DatetimeIndex):
@@ -1266,19 +1318,23 @@ class BWRPlots:
         else:
             plot_data = data
 
+        effective_date = date  # Initialize
         if (
             plot_data is None
             or (isinstance(plot_data, pd.DataFrame) and plot_data.empty)
             or (isinstance(plot_data, pd.Series) and plot_data.empty)
         ):
             print("Warning: No data provided for bar chart.")
-            # Create an empty figure
-            fig = make_subplots()
+            fig = make_subplots()  # Create an empty figure
+            # Set a default date if none provided
+            effective_date = date if date is not None else datetime.datetime.now().strftime("%Y-%m-%d")
+            scaled_data = pd.DataFrame()  # Empty data for axis calc
+            local_axis_options = {} if axis_options is None else axis_options.copy()
+            axis_min_calculated = 0  # Default for empty
         else:
             # Process the data
             if plot_data is not None and not plot_data.empty:
-                effective_date = date
-                if effective_date is None:
+                if effective_date is None:  # Check if still None
                     if not plot_data.empty and isinstance(
                         plot_data.index, pd.DatetimeIndex
                     ):
@@ -1288,19 +1344,17 @@ class BWRPlots:
                                 max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                             )
                         except Exception as e:
-                            effective_date = datetime.datetime.now().strftime(
-                                "%Y-%m-%d"
-                            )  # Default to today if error
+                            effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
                             print(
                                 f"[Warning] bar_chart: Could not automatically determine max date: {e}. Using today's date."
                             )
                     elif not plot_data.empty:  # Index is not datetime
                         # Default to today's date if index isn't datetime
                         effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                    else:  # Data is empty
-                        effective_date = datetime.datetime.now().strftime(
-                            "%Y-%m-%d"
-                        )  # Default to today if data empty
+
+            # Ensure date has a value if still None
+            if effective_date is None:
+                effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
             # --- Figure Creation ---
             fig = make_subplots()
@@ -1312,15 +1366,18 @@ class BWRPlots:
 
             max_value = 0
             if isinstance(plot_data, pd.DataFrame):
-                max_value = (
-                    plot_data.select_dtypes(include=np.number).max().max(skipna=True)
-                )
+                numeric_cols = plot_data.select_dtypes(include=np.number)
+                if not numeric_cols.empty:
+                    max_value = numeric_cols.max().max(skipna=True)
             elif isinstance(plot_data, pd.Series):
-                max_value = plot_data.max(skipna=True)
+                # Ensure series is numeric before max()
+                numeric_series = pd.to_numeric(plot_data, errors='coerce')
+                if not numeric_series.empty:
+                    max_value = numeric_series.max(skipna=True)
 
             scale = 1
             auto_suffix = ""
-            if pd.notna(max_value):
+            if pd.notna(max_value) and max_value > 0:  # Check > 0
                 scale, auto_suffix = _get_scale_and_suffix(max_value)
 
             final_suffix = suffix if suffix is not None else auto_suffix
@@ -1331,31 +1388,53 @@ class BWRPlots:
             if scale > 1:
                 try:
                     if isinstance(scaled_data, pd.DataFrame):
-                        numeric_cols = scaled_data.select_dtypes(
-                            include=np.number
-                        ).columns
-                        scaled_data[numeric_cols] = scaled_data[numeric_cols] / scale
-                    else:  # Series
-                        scaled_data = scaled_data / scale
+                        numeric_cols_scale = scaled_data.select_dtypes(include=np.number).columns
+                        if not numeric_cols_scale.empty:
+                            scaled_data[numeric_cols_scale] = scaled_data[numeric_cols_scale] / scale
+                    elif isinstance(scaled_data, pd.Series):  # Series
+                        # Ensure series is numeric before scaling
+                        numeric_series_scale = pd.to_numeric(scaled_data, errors='coerce')
+                        scaled_data = numeric_series_scale / scale
                 except Exception as e:
                     print(f"Warning: Could not scale data: {e}.")
                     scaled_data = plot_data.copy()  # Revert to original on error
 
-            # --- Calculate y-axis grid params for bottom gridline ---
+            # --- Calculate y-axis grid params ---
             axis_min_calculated = None
             yaxis_params = None
             y_values_for_range = []
-            if isinstance(scaled_data, pd.DataFrame):
-                y_values_for_range = scaled_data.select_dtypes(include=np.number).values.flatten()
-            elif isinstance(scaled_data, pd.Series):
-                y_values_for_range = scaled_data.values.flatten()
-            if y_values_for_range is not None and len(y_values_for_range) > 0:
+            # Use scaled_data for range calculation
+            temp_data_for_range = scaled_data  # Use the potentially scaled data
+            if isinstance(temp_data_for_range, pd.DataFrame):
+                numeric_range_cols = temp_data_for_range.select_dtypes(include=np.number)
+                if not numeric_range_cols.empty:
+                    y_values_for_range = numeric_range_cols.values.flatten()
+            elif isinstance(temp_data_for_range, pd.Series):
+                # Ensure series is numeric
+                numeric_range_series = pd.to_numeric(temp_data_for_range, errors='coerce')
+                if not numeric_range_series.empty:
+                    y_values_for_range = numeric_range_series.values.flatten()
+
+            # Drop NaNs before calculating params
+            y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
+
+            if y_values_for_range:  # Check if list is not empty after potential NaN drop
                 yaxis_params = calculate_yaxis_grid_params(
                     y_data=y_values_for_range,
                     padding=0.05,
                     num_gridlines=5
                 )
                 axis_min_calculated = yaxis_params["tick0"]
+                # --- Add yaxis_params to local_axis_options ---
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+            else:
+                # Handle case where no valid numeric data exists after scaling/NaN drop
+                print("Warning: No valid numeric data available for Y-axis range calculation.")
+                local_axis_options["primary_range"] = [0, 1]  # Default fallback range
+                axis_min_calculated = 0
 
             # --- Call the Chart Function ---
             _add_bar_traces(
@@ -1363,10 +1442,11 @@ class BWRPlots:
                 data=scaled_data,
                 cfg_plot=cfg_plot,
                 bar_color=current_bar_color,
+                cfg_colors=cfg_colors,  # Pass color config for cycling colors
             )
 
         # --- Apply Layout & Axes ---
-        self._apply_common_layout(
+        total_height, bottom_margin = self._apply_common_layout(
             fig,
             title,
             subtitle,
@@ -1375,8 +1455,8 @@ class BWRPlots:
             current_legend_y,
             source,
             effective_date,
-            None,
-            None,
+            None,  # source_x
+            None,  # source_y
             plot_area_b_padding=plot_area_b_padding,
         )
         self._apply_common_axes(
@@ -1385,14 +1465,25 @@ class BWRPlots:
             axis_min_calculated=axis_min_calculated
         )
 
-        # Update layout with bargap
-        fig.update_layout(bargap=cfg_plot["bargap"])
+        # --- Apply Bar Chart Specific Layout Updates ---
+        fig.update_layout(
+            bargap=cfg_plot.get("bargap", 0.15),  # Set the gap between bars
+            xaxis_type='category'  # Explicitly set x-axis to category type
+        )
+        
+        # Ensure grid lines are based on calculated ticks
+        if yaxis_params:
+            fig.update_yaxes(
+                tickmode=yaxis_params["tickmode"],
+                tick0=yaxis_params["tick0"],
+                dtick=yaxis_params["dtick"]
+            )
 
         # --- Add Watermark ---
         if use_watermark_flag:
             self._add_watermark(fig)
 
-        # --- Save Plot as PNG (Optional) ---
+        # --- Save Plot ---
         if save_image:
             success, message = save_plot_image(fig, title, save_path)
             if not success:
@@ -1556,6 +1647,24 @@ class BWRPlots:
                 local_axis_options["primary_suffix"] = suffix
             elif "primary_suffix" not in local_axis_options:
                 local_axis_options["primary_suffix"] = ""
+
+            # --- Calculate y-axis grid params for bottom gridline (for x-axis in horizontal bar) ---
+            axis_min_calculated = None
+            yaxis_params = None
+            x_values_for_range = plot_data[current_x_column].values.flatten()
+            if x_values_for_range is not None and len(x_values_for_range) > 0:
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=x_values_for_range,
+                    padding=0.05,
+                    num_gridlines=5
+                )
+                axis_min_calculated = yaxis_params["tick0"]
+                # --- Add yaxis_params to local_axis_options ---
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+
             # --- Call the Chart Function ---
             _add_horizontal_bar_traces(
                 fig=fig,
@@ -1571,6 +1680,14 @@ class BWRPlots:
                 show_bar_values=show_bar_values,
                 sort_ascending=current_sort_ascending,  # Add the missing sort_ascending parameter
             )
+            # --- DEBUG PRINT ---
+            import json
+            try:
+                from termcolor import colored
+                print(colored(f"[DEBUG HORIZONTAL_BAR] local_axis_options before _apply_common_axes:", "cyan"))
+            except ImportError:
+                print(f"[DEBUG HORIZONTAL_BAR] local_axis_options before _apply_common_axes:")
+            print(json.dumps(local_axis_options, indent=2, default=str))
 
         # --- Apply Layout & Axes ---
         self._apply_common_layout(
@@ -1589,7 +1706,7 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=None
+            axis_min_calculated=axis_min_calculated
         )
 
         # Additional Y-axis settings for horizontal bar chart
@@ -1783,6 +1900,19 @@ class BWRPlots:
                         num_gridlines=5
                     )
                     axis_min_calculated = yaxis_params["tick0"]
+                    # --- Add yaxis_params to local_axis_options ---
+                    local_axis_options["primary_range"] = yaxis_params["range"]
+                    local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                    local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                    local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                # --- DEBUG PRINT ---
+                import json
+                try:
+                    from termcolor import colored
+                    print(colored(f"[DEBUG MULTI_BAR] local_axis_options before _apply_common_axes:", "cyan"))
+                except ImportError:
+                    print(f"[DEBUG MULTI_BAR] local_axis_options before _apply_common_axes:")
+                print(json.dumps(local_axis_options, indent=2, default=str))
             else:
                 if suffix is not None:
                     local_axis_options["primary_suffix"] = suffix
@@ -2001,6 +2131,19 @@ class BWRPlots:
                         num_gridlines=5
                     )
                     axis_min_calculated = yaxis_params["tick0"]
+                    # --- Add yaxis_params to local_axis_options ---
+                    local_axis_options["primary_range"] = yaxis_params["range"]
+                    local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                    local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                    local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                # --- DEBUG PRINT ---
+                import json
+                try:
+                    from termcolor import colored
+                    print(colored(f"[DEBUG STACKED_BAR] local_axis_options before _apply_common_axes:", "cyan"))
+                except ImportError:
+                    print(f"[DEBUG STACKED_BAR] local_axis_options before _apply_common_axes:")
+                print(json.dumps(local_axis_options, indent=2, default=str))
             else:
                 if suffix is not None:
                     local_axis_options["primary_suffix"] = suffix

@@ -88,30 +88,34 @@ def calculate_yaxis_grid_params(y_data, padding=0.05, num_gridlines=5, top_extra
         Dict with keys: range, tick0, dtick, tickmode
     """
     y_data = np.asarray(y_data)
-    y_min = float(np.nanmin(y_data))
+    y_min_data = float(np.nanmin(y_data))  # Renamed for clarity
     y_max = float(np.nanmax(y_data))
-    if y_min == y_max:
-        y_max = y_min + 1  # Ensure visible range
-    data_range = y_max - y_min
-    # Only pad below if y_min < 0, otherwise set to 0
-    if y_min > 0:
-        axis_min = 0
+    if y_min_data == y_max:
+        y_max = y_min_data + 1  # Ensure visible range
+    data_range = y_max - y_min_data
+    # Calculate initial axis_min based on data minimum
+    if y_min_data >= 0:
+        initial_axis_min = 0
     else:
-        axis_min = y_min - data_range * padding
-    axis_max = y_max + data_range * padding
-    # Calculate a 'nice' tick interval
-    raw_tick = (axis_max - axis_min) / (num_gridlines - 1)
+        initial_axis_min = y_min_data - data_range * padding
+    initial_axis_max = y_max + data_range * padding
+    # Calculate the 'nice' tick interval
+    raw_tick = (initial_axis_max - initial_axis_min) / (num_gridlines - 1)
     dtick = _nice_number(raw_tick, round_=True)
-    # Snap axis_min to a multiple of dtick (usually 0 if all positive)
-    axis_min = np.floor(axis_min / dtick) * dtick
-    # Find the smallest axis_max >= y_max that is a multiple of dtick above axis_min
-    n_ticks = int(np.ceil((y_max - axis_min) / dtick)) + 1
-    axis_max = axis_min + dtick * (n_ticks - 1)
+    # Snap axis_min to a multiple of dtick
+    snapped_axis_min = np.floor(initial_axis_min / dtick) * dtick
+    # Correction: If data min is non-negative but snapping made axis_min negative, force to 0
+    final_axis_min = snapped_axis_min
+    if y_min_data >= 0 and snapped_axis_min < 0:
+        final_axis_min = 0.0
+    # Calculate the final axis maximum based on the corrected axis minimum
+    n_ticks = int(np.ceil((y_max - final_axis_min) / dtick)) + 1
+    final_axis_max = final_axis_min + dtick * (n_ticks - 1)
     # Extend axis_max by top_extra percent of the axis range
-    axis_max_extended = axis_max + (axis_max - axis_min) * top_extra
+    final_axis_max_extended = final_axis_max + (final_axis_max - final_axis_min) * top_extra
     return {
-        "range": [axis_min, axis_max_extended],
-        "tick0": axis_min,
+        "range": [final_axis_min, final_axis_max_extended],
+        "tick0": final_axis_min,
         "dtick": dtick,
         "tickmode": "linear"
     }

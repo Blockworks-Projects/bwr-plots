@@ -5,3 +5,4 @@ alwaysApply: true
 ---
 # TESTS
 - All test files you create MUST be created inside of the "tests" folder located in the root directory of the project
+- Do not overtest! Only run tests when asked to debug.
