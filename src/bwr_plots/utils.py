@@ -7,14 +7,29 @@ from pathlib import Path
 
 
 # Helper function for deep merging dictionaries (like config)
-def deep_merge_dicts(base, updates):
-    """Recursively merges dictionaries. Updates values in base."""
-    result = copy.deepcopy(base)
-    for key, value in updates.items():
-        if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+def deep_merge_dicts(dict1, dict2):
+    """
+    Deep merges dict2 into dict1, where dict2 values override dict1 values for the same keys.
+    Handles nested dictionaries by recursively merging them.
+    
+    Args:
+        dict1: Base dictionary to merge into
+        dict2: Dictionary whose values will override dict1 for matching keys
+        
+    Returns:
+        A new dictionary with dict2 values merged into dict1
+    """
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        return dict2
+
+    result = dict1.copy()
+    
+    for key, value in dict2.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = deep_merge_dicts(result[key], value)
         else:
             result[key] = value
+            
     return result
 
 

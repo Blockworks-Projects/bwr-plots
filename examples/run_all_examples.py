@@ -11,7 +11,9 @@ def run_example_scripts():
     example_files = [
         f
         for f in examples_dir.glob("*.py")
-        if f.name != this_file and f.name != "__init__.py"
+        if f.name != this_file
+           and f.name != "__init__.py"
+           and f.name != "demo_table.py"
     ]
 
     if not example_files:

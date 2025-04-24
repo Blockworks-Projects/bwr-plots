@@ -10,7 +10,7 @@ import re
 import datetime
 import time
 import sys
-
+import io
 from typing import Dict, List, Optional, Union, Tuple, Any
 
 # --- Relative Imports ---
@@ -28,7 +28,6 @@ from .charts.bar import _add_bar_traces
 from .charts.horizontal_bar import _add_horizontal_bar_traces
 from .charts.multi_bar import _add_multi_bar_traces
 from .charts.stacked_bar import _add_stacked_bar_traces
-from .charts.table import _add_table_trace
 
 
 # Utility function to generate safe filenames from titles
@@ -1557,128 +1556,6 @@ class BWRPlots:
             self._add_watermark(fig)
 
         # --- Save Plot as PNG (Optional) ---
-        if save_image:
-            success, message = save_plot_image(fig, title, save_path)
-            if not success:
-                print(message)
-        if open_in_browser:
-            fig.show()
-        return fig
-
-    def table(
-        self,
-        data: pd.DataFrame,
-        title: str = "",
-        subtitle: str = "",
-        source: str = "",
-        date: Optional[str] = None,
-        use_watermark: Optional[bool] = None,
-        watermark_x: Optional[float] = None,
-        watermark_y: Optional[float] = None,
-        source_x: Optional[float] = None,
-        source_y: Optional[float] = None,
-        plot_area_b_padding: Optional[int] = None,  # Unused for table
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        open_in_browser: bool = False,  # Defaulted to False
-    ) -> go.Figure:
-        """
-        Creates a Blockworks branded table.
-
-        Args:
-            data: DataFrame containing the table data
-            title: Main title text
-            subtitle: Subtitle text
-            source: Source citation text
-            date: Date for citation
-            use_watermark: Whether to show watermark
-            watermark_x: X position override for watermark
-            watermark_y: Y position override for watermark
-            source_x: X position for source citation
-            source_y: Y position for source citation
-            plot_area_b_padding: Bottom padding (included for API consistency)
-            save_image: Whether to save as PNG
-            save_path: Path to save image (default: current directory)
-            open_in_browser: Whether to open the plot in a browser
-
-        Returns:
-            A plotly Figure object
-        """
-        # --- Get Config Specifics ---
-        cfg_gen = self.config["general"]
-        cfg_table = self.config["plot_specific"]["table"]
-        cfg_colors = self.config["colors"]
-        cfg_wm = self.config["watermark"]
-        cfg_layout = self.config["layout"]
-
-        # --- Configure Watermark ---
-        use_watermark_flag = (
-            use_watermark if use_watermark is not None else cfg_wm["default_use"]
-        )
-
-        # Override watermark position if specified
-        if watermark_x is not None:
-            cfg_wm["table_x"] = watermark_x
-        if watermark_y is not None:
-            cfg_wm["table_y"] = watermark_y
-
-        # --- Effective Date ---
-        effective_date = date if date is not None else ""
-
-        # --- Table Height Calculation ---
-        # Height is dynamic based on number of rows
-        title_factor = cfg_table["title_height_adjust_factor"]
-        title_height = cfg_layout["title_padding"] * title_factor
-        row_height = cfg_table["row_height"]
-        header_height = cfg_table["header_height"]
-        footer_height = cfg_table["footer_height"]
-        buffer_height = cfg_table["buffer_height"]
-
-        # Calculate the required height
-        n_rows = min(
-            len(data), 20
-        )  # Limit to 20 rows maximum to prevent excessive height
-        table_height = (
-            title_height
-            + header_height
-            + (n_rows * row_height)
-            + footer_height
-            + buffer_height
-        )
-
-        # --- Figure Creation ---
-        fig = make_subplots()
-
-        # --- Add Table Trace ---
-        _add_table_trace(
-            fig=fig,
-            data=data,
-            cfg_table=cfg_table,
-            cfg_colors=cfg_colors,
-            table_height=table_height,
-        )
-
-        # --- Apply Layout ---
-        self._apply_common_layout(
-            fig,
-            title,
-            subtitle,
-            table_height,
-            False,
-            0,
-            source,
-            effective_date,
-            source_x,
-            source_y,
-            is_table=True,
-            plot_area_b_padding=0,  # Tables don't use plot_area_b_padding
-        )
-
-        # --- Add Watermark ---
-        if use_watermark_flag:
-            self._add_watermark(fig, is_table=True)
-
-        # --- Save Table as PNG (Optional) ---
         if save_image:
             success, message = save_plot_image(fig, title, save_path)
             if not success:

@@ -9,34 +9,11 @@ DEFAULT_BWR_CONFIG = {
         "template": "plotly_white",
     },
     "colors": {
-        # Moved background_color here
         "background_color": "#1A1A1A",
-        # Brand Palette
-        "primary": "#5637cd",
-        "secondary": "#5b35d6",
-        "tertiary": "#8a7cff",
-        "accent1": "#EF798A",
-        "accent2": "#C0B9D8",
-        "neutral1": "#EFEEF0",
-        "neutral2": "#adb0b5",
-        "dark1": "#120b2c",
-        "dark2": "#0a0a0a",
-        "highlight": "#F3A712",
-        "subtitle": "#adb0b5",
-        # Chart Specific Defaults
+        "primary": "#5637cd",  # Kept for clarity, used for bar_default/hbar_positive
         "bar_default": "#5637cd",
         "hbar_positive": "#5637cd",
         "hbar_negative": "#EF798A",
-        "gridline": "#252424",
-        "axis_line": "#d1d5db",
-        "zeroline": "#d1d5db",
-        "spike_line": "#adb0b5",
-        "table_header_fill": "#5637cd",
-        "table_header_font": "white",
-        "table_cell_line": "rgba(0,0,0,0.2)",
-        "table_cell_fill_even": "rgba(200, 200, 200, 0.6)",
-        "table_cell_fill_odd": "white",
-        # Default Palette
         "default_palette": [
             "#5637cd",
             "#779BE7",
@@ -54,10 +31,9 @@ DEFAULT_BWR_CONFIG = {
             "#bcbd22",
             "#17becf",
         ],
+        # Removed: secondary, tertiary, accent1, accent2, neutral1, neutral2, dark1, dark2, highlight, subtitle, gridline, axis_line, zeroline, spike_line, table_header_fill, table_header_font, table_cell_line, table_cell_fill_even, table_cell_fill_odd, brand_primary, brand_secondary, brand_text, bg_color, grid_color, title_color, subtitle_color, axis_color, annotation_color, plot_line1-10, plot_fill1-10
     },
     "fonts": {
-        # Font families and sizes for all text elements
-        # NOTE: Maison Neue and Inter should be installed on your system for best appearance
         "normal_family": "Maison Neue, Inter, sans-serif",
         "bold_family": "Maison Neue Medium, Inter, sans-serif",
         "title": {"size": 51.6, "color": "#ededed"},
@@ -66,19 +42,11 @@ DEFAULT_BWR_CONFIG = {
         "tick": {"size": 21.6, "color": "#ededed"},
         "legend": {"size": 24.0, "color": "#ededed"},
         "annotation": {"size": 17.4, "color": "#9f95c6"},
-        "hbar_text": {"size": 14.4, "color": "#ededed"},
-        "table_header": {"size": 19.2, "color": "white"},
-        "table_cell": {"size": 16.8, "color": "#120B2C"},
+        # Removed: hbar_text, table_header, table_cell, family, source, watermark
     },
     "watermark": {
-        # Watermark configuration
-        "default_path": "brand-assets/bwr_white.svg",  # Path to watermark SVG, relative to project root
+        "default_path": "brand-assets/bwr_white.svg",
         "default_use": True,
-        "chart_x": 1.012,
-        "chart_xanchor": "right",
-        "chart_y": 1.275,
-        "chart_sizex": 0.20,
-        "chart_sizey": 0.20,
         "chart_opacity": 1,
         "chart_layer": "above",
         "table_x": 0.0,
@@ -89,7 +57,14 @@ DEFAULT_BWR_CONFIG = {
         "table_layer": "above",
         "table_xanchor": "left",
         "table_yanchor": "top",
-        "chart_yanchor": "top",
+        # Use the final (non-duplicate) chart_* values
+        "chart_x": 0.98,
+        "chart_y": 0.02,
+        "chart_sizex": 0.12,
+        "chart_sizey": 0.12,
+        "chart_xanchor": "right",
+        "chart_yanchor": "bottom",
+        # Removed: duplicate chart_* keys, default_type, default_text, default_image_path
     },
     "layout": {
         "margin_l": 120,
@@ -128,10 +103,10 @@ DEFAULT_BWR_CONFIG = {
         "xanchor": "right",
         "yanchor": "top",
         "showarrow": False,
-        "table_source_x": 0.95,
-        "table_source_y": 0.1,
-        "table_xanchor": "right",
-        "table_yanchor": "top",
+        "chart_source_x": 0.0,
+        "chart_source_y": 0.0,
+        "chart_source_xanchor": "left",
+        "chart_source_yanchor": "top",
     },
     "axes": {
         "linecolor": "#E9EAEB",
@@ -182,17 +157,15 @@ DEFAULT_BWR_CONFIG = {
             "line_smoothing": 0.3,
         },
         "metric_share_area": {
-            "mode": "none",
             "stackgroup": "one",
-            "fill": "tonexty",
-            "hover_template": "%{y:.1%}<extra>%{fullData.name}</extra>",
             "y_tickformat": ".0%",
             "y_range": [0, 1],
             "legend_marker_symbol": "circle",
+            # Removed: mode, fill, hover_template (overridden in code)
         },
         "bar": {
             "bargap": 0.15,
-            "default_group_days": None,
+            # Removed: default_group_days (not referenced)
         },
         "horizontal_bar": {
             "orientation": "h",
@@ -202,10 +175,8 @@ DEFAULT_BWR_CONFIG = {
             "default_sort_ascending": False,
             "bar_height": 0.7,
             "bargap": 0.15,
-            "xaxis_ticksuffix_auto": True,
             "yaxis_automargin": True,
-            "uniformtext_mode": "hide",
-            "uniformtext_minsize": 14.4,
+            # Removed: xaxis_ticksuffix_auto, uniformtext_mode, uniformtext_minsize (not referenced)
         },
         "multi_bar": {
             "default_scale_values": True,
@@ -217,30 +188,22 @@ DEFAULT_BWR_CONFIG = {
             "orientation": "v",
             "textposition": "outside",
             "legend_marker_symbol": "circle",
+            # Removed: default_group_days (not referenced)
         },
         "stacked_bar": {
             "default_sort_descending": False,
             "barmode": "stack",
             "bargap": 0.15,
             "bargroupgap": 0.1,
-            "default_group_days": None,
             "default_scale_values": True,
             "y_tickformat": ",.0f",
             "legend_marker_symbol": "circle",
-        },
-        "table": {
-            "row_height": 72,
-            "header_height": 60,
-            "title_height_adjust_factor": 0.5,
-            "footer_height": 96,
-            "buffer_height": 60,
-            "header_align_first": "left",
-            "header_align_other": "center",
-            "cell_align_first": "left",
-            "cell_align_other": "center",
-            "header_line_width": 1.2,
-            "cell_line_width": 1.2,
+            # Removed: default_group_days (not referenced)
         },
     },
 }
 # Note: Output images are saved to './output/' by default if save_path is not provided in plotting methods.
+
+def get_default_config():
+    """Returns a deep copy of the default configuration"""
+    return copy.deepcopy(DEFAULT_BWR_CONFIG)

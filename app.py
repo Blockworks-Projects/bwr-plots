@@ -9,28 +9,31 @@ from typing import Optional, Dict, Any, Tuple, List
 from contextlib import contextmanager
 from streamlit.components.v1 import html as st_html  # Added for raw HTML rendering
 
-# Assume bwr_plots is installed and import necessary components
-# Ensure the bwr_plots package is in the Python path or installed
+# --- BWR Plots and AG-Grid Imports ---
 try:
-    # If bwr_plots is installed as a package
+    # Import BWRPlots for charts
     from bwr_plots import BWRPlots
+    # Import the new AG-Grid renderer and helper
+    from bwr_plots.aggrid_table import render_aggrid_table, dataframe_to_csv_bytes
 except ImportError:
-    # Fallback if running directly and src is adjacent
+    # Keep existing fallback logic for BWRPlots
     import sys
     from pathlib import Path
-
-    # Add the parent directory (assuming app.py is in the root or similar)
-    # Adjust the path depth if your structure is different
     project_root = Path(__file__).resolve().parent
     src_path = project_root / "src"
     if src_path.exists():
         sys.path.insert(0, str(project_root))
-        from src.bwr_plots import BWRPlots
+        try:
+            from src.bwr_plots import BWRPlots
+            from src.bwr_plots.aggrid_table import render_aggrid_table, dataframe_to_csv_bytes
+        except ImportError as ie:
+             st.error(f"Could not import necessary libraries from src: {ie}")
+             st.stop()
     else:
         st.error(
             "Could not find the 'bwr_plots' library. Please ensure it's installed or the 'src' directory is accessible."
         )
-        st.stop()  # Stop execution if library isn't found
+        st.stop()
 
 # --- Configuration ---
 SUPPORTED_FILE_TYPES = ["csv", "xlsx"]
@@ -41,9 +44,10 @@ PLOT_TYPES = {
     "Grouped Bar (Timeseries)": "multi_bar",
     "Stacked Bar (Timeseries)": "stacked_bar_chart",
     "Horizontal Bar Chart": "horizontal_bar",
-    "Table": "table",
+    "Table (AG-Grid)": "aggrid_table", # Add new table type
+    # "Table": "table", # REMOVE old plotly table
 }
-# Plot types requiring a time-series index
+# Plot types requiring a time-series index (AG-Grid doesn't strictly require it)
 INDEX_REQUIRED_PLOTS = [
     "Scatter Plot",
     "Metric Share Area Plot",
@@ -54,14 +58,15 @@ INDEX_REQUIRED_PLOTS = [
 SMOOTHING_PLOT_TYPES = ["Scatter Plot", "Metric Share Area Plot"]
 # Plot types requiring resampling
 RESAMPLING_PLOT_TYPES = ["Grouped Bar (Timeseries)", "Stacked Bar (Timeseries)"]
-# Plot types requiring filtering
-FILTERING_PLOT_TYPES = INDEX_REQUIRED_PLOTS
+# Plot types requiring filtering (AG-Grid can use its own filters, but pre-filtering is ok)
+FILTERING_PLOT_TYPES = INDEX_REQUIRED_PLOTS + ["Table (AG-Grid)"] # Add AG-Grid here if pre-filtering is desired
 # Plot types with specific column mapping needs
 COLUMN_MAPPING_PLOTS = {
     "Horizontal Bar Chart": {
         "y_column": "Category Column (Y-axis)",
         "x_column": "Value Column (X-axis)",
     }
+    # AG-Grid doesn't need this specific mapping here, config is done differently
 }
 # Potential date column names (case-insensitive)
 DATE_COLUMN_NAMES = ["date", "time", "datetime", "timestamp"]
@@ -183,7 +188,7 @@ def build_plot(
 # --- Streamlit App ---
 
 st.set_page_config(
-    page_title="BWR Plots Generator",
+    page_title="BWR Plots & Tables Generator", # Updated title
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -237,7 +242,7 @@ if df is not None and plotter is not None:
     with col_plot_type:
         with card("Plot Type"): # Use the existing card helper
             plot_type_display = st.selectbox(
-                "Select plot type", # Changed label slightly
+                "Select output type", # Changed label
                 list(PLOT_TYPES.keys()),
                 key="plot_type_selector",
             )
@@ -274,7 +279,7 @@ if df is not None and plotter is not None:
 
             # --- 3. Set Index (Conditional) ---
             if plot_type_display in INDEX_REQUIRED_PLOTS:
-                st.markdown("##### Index")
+                st.markdown("##### Index (for Time Series Charts)")
                 potential_date_col = find_potential_date_col(st.session_state.df) # Assumes df is loaded
                 # Filter options based on columns NOT dropped
                 current_col_options = ["<None>"] + [c for c in original_cols if c not in cols_to_drop]
@@ -303,7 +308,7 @@ if df is not None and plotter is not None:
 
             # --- 4. Filter (Lookback/Window) (Conditional) ---
             if plot_type_display in FILTERING_PLOT_TYPES:
-                st.markdown("##### Filter Data")
+                st.markdown("##### Filter Data (Time Series)")
                 filter_mode = st.radio(
                     "Filter by:",
                     ["Lookback", "Date Window"],
@@ -349,7 +354,7 @@ if df is not None and plotter is not None:
 
             # --- 5. Resample (Conditional) ---
             if plot_type_display in RESAMPLING_PLOT_TYPES:
-                st.markdown("##### Resample")
+                st.markdown("##### Resample (Time Series Charts)")
                 resample_freq_selection = st.selectbox(
                     "Resample Frequency",
                     options=["<None>", "D", "W", "ME", "QE", "YE"], # Use pandas offset aliases
@@ -363,7 +368,7 @@ if df is not None and plotter is not None:
 
             # --- 6. Smooth (Conditional) ---
             if plot_type_display in SMOOTHING_PLOT_TYPES:
-                st.markdown("##### Smooth")
+                st.markdown("##### Smooth (Time Series Charts)")
                 smoothing_window_val = st.number_input(
                     "Smoothing Window (days, 0=none)",
                     min_value=0,
@@ -402,9 +407,9 @@ if df is not None and plotter is not None:
 
     # --- Styling Column ---
     with col_styling:
-         with card("Styling"):
+         with card("Display Info"): # Renamed from Styling
             # (Styling UI elements will go here - see step 5)
-            plot_title = st.text_input("Title", "My BWR Plot", key="plot_title")
+            plot_title = st.text_input("Title", "My Data Display", key="plot_title")
             plot_subtitle = st.text_input("Subtitle", "Generated from uploaded data", key="plot_subtitle")
             plot_source = st.text_input("Data source text", "Uploaded Data", key="plot_source")
             y_prefix = st.text_input("Y-axis prefix", "", key="y_prefix")
@@ -412,7 +417,7 @@ if df is not None and plotter is not None:
             # (Any other styling options)
 
     # --- Generate Button (Outside columns, below them) ---
-    if st.button("Generate Plot", key="generate_button"):
+    if st.button("Generate Output", key="generate_button"):
         if 'df' not in st.session_state or st.session_state.df is None:
             st.warning("Please upload data first.")
         else:
@@ -528,53 +533,82 @@ if df is not None and plotter is not None:
                      st.warning("No data remaining after applying transformations.")
                      st.stop()
 
-                # --- Call build_plot with PROCESSED data ---
-                with st.spinner("Generating plot..."):
-                    # Retrieve styling arguments from session state or widgets
-                    plot_title = st.session_state.get("plot_title", "My BWR Plot")
-                    plot_subtitle = st.session_state.get("plot_subtitle", "Generated from uploaded data")
-                    plot_source = st.session_state.get("plot_source", "Uploaded Data")
-                    y_prefix = st.session_state.get("y_prefix", "")
-                    y_suffix = st.session_state.get("y_suffix", "")
+                # --- Conditional Rendering ---
+                st.markdown("---") # Separator before output
+                st.markdown(f"### {plot_title}")
+                if plot_subtitle:
+                    st.markdown(f"*{plot_subtitle}*")
 
-                    # Note: build_plot now receives the *processed* df
-                    # It no longer needs to handle index, lookback, smoothing, resampling
-                    fig = build_plot(
-                        df=processed_df, # Pass the transformed data
-                        plotter=st.session_state.plotter_instance,
-                        plot_type_display=plot_type_display,
-                        # Pass column mappings needed by specific plots (e.g., horizontal_bar)
-                        column_mappings=column_mappings,
-                        # Pass styling args
-                        title=plot_title,
-                        subtitle=plot_subtitle,
-                        source=plot_source,
-                        prefix=y_prefix,
-                        suffix=y_suffix,
-                    )
+                # --- Conditional Rendering based on plot type ---
+                is_plotly_chart = plot_type_display != "Table (AG-Grid)"
+                is_aggrid_table = plot_type_display == "Table (AG-Grid)"
 
-                    if fig:
-                        try:
-                            html_string = fig.to_html(
-                                include_plotlyjs='cdn',
-                                full_html=True,
-                                config={'displayModeBar': True} # Keep mode bar
-                            )
-                            plot_height = getattr(fig.layout, 'height', None) or 600
-                            component_height = plot_height + 50 # Add some buffer
-                            st_html(html_string, height=component_height, scrolling=True)
+                if is_aggrid_table:
+                    # --- Render AG-Grid Table ---
+                    with st.spinner("Generating table..."):
+                        # Prepare AG-Grid specific overrides if any
+                        aggrid_params_override = {
+                            "height": st.session_state.get("aggrid_height", 500)
+                        }
+                        # Add more overrides here based on UI elements if needed
 
-                            st.download_button(
-                                label="Download HTML",
-                                data=html_string.encode('utf-8'),
-                                file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
-                                mime="text/html",
-                            )
-                        except Exception as e:
-                            st.error(f"Could not render or prepare plot HTML: {e}")
-                            traceback.print_exc()
-                    else:
-                        st.warning("Plot generation did not produce a figure. Check data and settings.")
+                        # Render the grid
+                        render_aggrid_table(
+                            df=processed_df,
+                            aggrid_params_override=aggrid_params_override
+                            # Pass other overrides if implemented
+                        )
+
+                        # Add Source text below
+                        if plot_source:
+                            st.caption(f"Source: {plot_source}")
+
+                        # Add Download Button for CSV
+                        csv_bytes = dataframe_to_csv_bytes(processed_df)
+                        st.download_button(
+                            label="Download Table Data as CSV",
+                            data=csv_bytes,
+                            file_name=f"{plot_title.lower().replace(' ', '_')}_data.csv",
+                            mime="text/csv",
+                        )
+
+                elif is_plotly_chart:
+                    # --- Render Plotly Chart ---
+                    if plotter is None:
+                         st.error("Plotter instance not available. Cannot generate chart.")
+                         st.stop()
+
+                    with st.spinner("Generating plot..."):
+                        fig = build_plot(
+                            df=processed_df,
+                            plotter=plotter,
+                            plot_type_display=plot_type_display,
+                            column_mappings=column_mappings,
+                            title=plot_title, # Title/subtitle handled by build_plot layout
+                            subtitle=plot_subtitle,
+                            source=plot_source,
+                            prefix=y_prefix,
+                            suffix=y_suffix,
+                        )
+
+                        if fig:
+                            try:
+                                # Display Plotly chart
+                                st.plotly_chart(fig, use_container_width=True)
+
+                                # Add Download Button for HTML
+                                html_string = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})
+                                st.download_button(
+                                    label="Download Plot as HTML",
+                                    data=html_string.encode('utf-8'),
+                                    file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
+                                    mime="text/html",
+                                )
+                            except Exception as e:
+                                st.error(f"Could not render or prepare plot HTML: {e}")
+                                traceback.print_exc()
+                        else:
+                            st.warning("Plot generation did not produce a figure. Check data and settings.")
 
             except Exception as e:
                 st.error("An error occurred during data processing or plot generation.")
