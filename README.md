@@ -1,8 +1,3 @@
-Okay, I've analyzed the codebase (`bwr-plots-codebase.txt`) and updated the README.md. I focused on making it comprehensive by covering all core features, useful by providing clear examples and notes, and concise by structuring the information logically and avoiding excessive detail.
-
-Here is the updated README content:
-
-```markdown
 # BWR Plots
 
 A Python library designed for creating Blockworks Research branded data visualizations using Plotly and interactive tables using AG-Grid within a Streamlit environment.
