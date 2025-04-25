@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Union, Tuple, Any
 import math
 from termcolor import colored
 import json
+import traceback
 
 # --- Relative Imports ---
 from .config import DEFAULT_BWR_CONFIG
@@ -265,6 +266,21 @@ class BWRPlots:
         self.watermark = None
         self._load_watermark()
 
+        # --- ADD THESE LINES ---
+        # Load SVG background based on final config
+        self.svg_background_data = None
+        self._load_svg_background()
+        # --------------------
+
+        # --- ADD THESE LINES ---
+        print(f"[DEBUG] BWRPlots Init: Final config 'general.svg_background_path': {self.config.get('general', {}).get('svg_background_path')}")
+        # Print the use_svg_background flag for a few key plot types to check config merge
+        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.scatter.use_svg_background': {self.config.get('plot_specific', {}).get('scatter', {}).get('use_svg_background')}")
+        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.bar.use_svg_background': {self.config.get('plot_specific', {}).get('bar', {}).get('use_svg_background')}")
+        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.multi_bar.use_svg_background': {self.config.get('plot_specific', {}).get('multi_bar', {}).get('use_svg_background')}")
+        print(f"[DEBUG] BWRPlots Init: Calling _load_svg_background...")
+        # --------------------
+
     def _load_watermark(self) -> None:
         """
         Load SVG watermark based on current config, looking relative to package root.
@@ -311,6 +327,48 @@ class BWRPlots:
                 f"Warning: Failed to load watermark from {svg_rel_path} (resolved: {svg_abs_path}): {e}"
             )
             self.watermark = None
+
+    # --- ADD THIS NEW METHOD ---
+    def _load_svg_background(self) -> None:
+        """Loads the SVG background specified in the config."""
+        svg_rel_path = self.config["general"].get("svg_background_path", "")
+        print(f"[DEBUG] SVG Background: Relative path from config: '{svg_rel_path}'") # VERIFY/ADD
+
+        if not svg_rel_path:
+            print("Warning: No svg_background_path specified in config['general']. SVG background disabled.")
+            self.svg_background_data = None
+            return
+
+        try:
+            # Resolve project root relative to this file (core.py is in src/bwr_plots/)
+            project_root = Path(__file__).resolve().parent.parent.parent
+            svg_abs_path = project_root / svg_rel_path
+            print(f"[DEBUG] SVG Background: Calculated absolute path: '{svg_abs_path}'") # VERIFY/ADD
+
+            if svg_abs_path.exists():
+                print(f"[DEBUG] SVG Background: File exists at calculated path.") # VERIFY/ADD
+                with open(svg_abs_path, "r", encoding="utf-8") as file:
+                    svg_content = file.read()
+                self.svg_background_data = "data:image/svg+xml;base64," + base64.b64encode(
+                    svg_content.encode("utf-8")
+                ).decode("utf-8")
+                print(f"[INFO] Successfully loaded SVG background from: {svg_abs_path}")
+                print(f"[DEBUG] SVG Background: self.svg_background_data is now set (length: {len(self.svg_background_data)}).") # VERIFY/ADD
+            else:
+                print(f"[DEBUG] SVG Background: File DOES NOT exist at calculated path.") # VERIFY/ADD <--- Important Check
+                print(f"Warning: SVG background file not found at resolved path: {svg_abs_path}")
+                self.svg_background_data = None
+
+        except FileNotFoundError:
+            print(f"[DEBUG] SVG Background: FileNotFoundError for path: {svg_abs_path}") # DEBUG
+            print(f"Warning: SVG background file specified but not found at path: {svg_abs_path}")
+            self.svg_background_data = None
+        except Exception as e:
+            print(f"[DEBUG] SVG Background: Exception during SVG load: {type(e).__name__}") # DEBUG
+            print(f"Warning: Failed to load SVG background from {svg_rel_path} (resolved: {svg_abs_path}): {e}")
+            traceback.print_exc() # Print detailed error
+            self.svg_background_data = None
+    # --------------------------
 
     def _get_font_dict(self, font_type: str) -> Dict[str, Any]:
         """
@@ -441,8 +499,42 @@ class BWRPlots:
         if source or date:
             min_neg_y = min(min_neg_y, annot_y)
 
-        space_below = abs(min_neg_y * height) if min_neg_y < -0.05 else 0
-        bottom_margin = max(cfg_layout["margin_b_min"], int(space_below) + 50)
+        # --- REVISED MARGIN CALCULATION ---
+
+        # Calculate space needed *just* for the annotation text below the plot (y < 0)
+        annotation_space_below = 0
+        # Check if there's a source/date AND the annotation position is below the plot
+        if (source or date) and annot_y < 0:
+            # Use the 'height' parameter passed to this function
+            annotation_space_below = abs(annot_y * height)
+
+        # Calculate a base bottom margin considering the minimum required by config
+        # and the space needed for the annotation text, plus a small buffer.
+        bottom_margin_base = max(cfg_layout["margin_b_min"], int(annotation_space_below) + 20) # Base margin
+
+        # Define how much *extra* space the horizontal legend needs (in pixels)
+        # This value might need tweaking based on font size and desired padding.
+        horizontal_legend_extra_space_px = 0
+
+        # Determine if we are actually showing a horizontal legend below the plot
+        is_horizontal_legend_shown_below = (
+            show_legend                             # Is the legend globally enabled?
+            and cfg_legend["orientation"] == "h"    # Is its orientation horizontal?
+            # and legend_y < 0                      # Optionally: Is it positioned below y=0? (Typically true based on config)
+        )
+
+        # Add the extra legend space *only* if the horizontal legend is shown below
+        if is_horizontal_legend_shown_below:
+            bottom_margin = bottom_margin_base + horizontal_legend_extra_space_px
+            # Optional Debug Print:
+            # print(f"[DEBUG] Horizontal legend active. Adding {horizontal_legend_extra_space_px}px. Base: {bottom_margin_base}, Final: {bottom_margin}")
+        else:
+            # Otherwise, just use the base margin calculated earlier
+            bottom_margin = bottom_margin_base
+            # Optional Debug Print:
+            # print(f"[DEBUG] Horizontal legend inactive/not shown. Final margin: {bottom_margin}")
+
+        # --- END REVISED MARGIN CALCULATION ---
 
         top_margin = cfg_layout["margin_t_base"] + cfg_layout["title_padding"]
 
@@ -1015,31 +1107,13 @@ class BWRPlots:
             axis_min_calculated=axis_min_calculated
         )
 
-        # --- Debugging Output ---
-        try:
-            from termcolor import colored
-            color = 'cyan'
-        except ImportError:
-            def colored(x, color=None): return x
-            color = None
-        print(colored("[DEBUG] scatter_plot: primary_data shape: {}".format(primary_data_orig.shape if hasattr(primary_data_orig, 'shape') else 'N/A'), color))
-        print(colored("[DEBUG] scatter_plot: primary_data columns: {}".format(list(primary_data_orig.columns) if hasattr(primary_data_orig, 'columns') else 'N/A'), color))
-        print(colored("[DEBUG] scatter_plot: has_secondary: {}".format(has_secondary), color))
-        if has_secondary and secondary_data_orig is not None:
-            print(colored("[DEBUG] scatter_plot: secondary_data shape: {}".format(secondary_data_orig.shape if hasattr(secondary_data_orig, 'shape') else 'N/A'), color))
-            print(colored("[DEBUG] scatter_plot: secondary_data columns: {}".format(list(secondary_data_orig.columns) if hasattr(secondary_data_orig, 'columns') else 'N/A'), color))
-        # Print layout margins
-        layout = fig.layout
-        print(colored(f"[DEBUG] scatter_plot: layout.margin: l={layout.margin.l}, r={layout.margin.r}, t={layout.margin.t}, b={layout.margin.b}", color))
-        # Print xaxis automargin and ticklabel settings
-        if hasattr(layout, 'xaxis'):
-            print(colored(f"[DEBUG] scatter_plot: xaxis.automargin: {getattr(layout.xaxis, 'automargin', 'N/A')}", color))
-            print(colored(f"[DEBUG] scatter_plot: xaxis.tickmode: {getattr(layout.xaxis, 'tickmode', 'N/A')}", color))
-            print(colored(f"[DEBUG] scatter_plot: xaxis.nticks: {getattr(layout.xaxis, 'nticks', 'N/A')}", color))
-            print(colored(f"[DEBUG] scatter_plot: xaxis.tickvals: {getattr(layout.xaxis, 'tickvals', 'N/A')}", color))
-        # Print number of x-ticks if possible
-        if scaled_primary_data is not None and hasattr(scaled_primary_data, 'index'):
-            print(colored(f"[DEBUG] scatter_plot: number of x-ticks: {len(scaled_primary_data.index)}", color))
+        # --- ADD THIS CALL ---
+        plot_type_key = 'scatter' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1237,6 +1311,14 @@ class BWRPlots:
             local_axis_options,
             axis_min_calculated=axis_min_calculated
         )
+
+        # --- ADD THIS CALL ---
+        plot_type_key = 'metric_share_area' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1464,6 +1546,14 @@ class BWRPlots:
             local_axis_options,
             axis_min_calculated=axis_min_calculated
         )
+
+        # --- ADD THIS CALL ---
+        plot_type_key = 'bar' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
 
         # --- Apply Bar Chart Specific Layout Updates ---
         fig.update_layout(
@@ -1706,19 +1796,15 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated
         )
 
-        # Additional Y-axis settings for horizontal bar chart
-        fig.update_yaxes(
-            automargin=cfg_plot["yaxis_automargin"],
-            showgrid=False,
-        )
-
-        # Additional X-axis settings
-        fig.update_xaxes(
-            showgrid=True,
-        )
+        # --- ADD THIS CALL ---
+        plot_type_key = 'horizontal_bar' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -1950,6 +2036,14 @@ class BWRPlots:
             local_axis_options,
             axis_min_calculated=axis_min_calculated
         )
+
+        # --- ADD THIS CALL ---
+        plot_type_key = 'multi_bar' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
 
         # --- Add Watermark ---
         if use_watermark_flag:
@@ -2244,6 +2338,14 @@ class BWRPlots:
             axis_min_calculated=axis_min_calculated
         )
 
+        # --- ADD THIS CALL ---
+        plot_type_key = 'stacked_bar' # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
+        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
+        self._apply_svg_background(fig, plot_type_key)
+        # --------------------
+
         # --- Add Watermark ---
         if use_watermark_flag:
             self._add_watermark(fig)
@@ -2362,3 +2464,41 @@ class BWRPlots:
                 webbrowser.open(f"file://{tmp.name}")
 
         return fig
+
+    # --- ADD THIS NEW METHOD ---
+    def _apply_svg_background(self, fig: go.Figure, plot_type_key: str) -> None:
+        """Applies the loaded SVG background as a layout image if configured."""
+        print(f"[DEBUG] Apply SVG BG: Entered for plot_type_key: '{plot_type_key}'") # DEBUG
+
+        if plot_type_key == "table":  # Explicitly skip for tables
+            print(f"[DEBUG] Apply SVG BG: Skipping for plot type 'table'.") # DEBUG
+            return
+
+        use_svg_bg = self.config["plot_specific"].get(plot_type_key, {}).get("use_svg_background", False)
+        print(f"[DEBUG] Apply SVG BG: 'use_svg_background' flag for '{plot_type_key}': {use_svg_bg}") # DEBUG
+        svg_data_available = self.svg_background_data is not None
+        print(f"[DEBUG] Apply SVG BG: SVG data available (self.svg_background_data is not None): {svg_data_available}") # DEBUG
+
+        if use_svg_bg and self.svg_background_data:
+            print(f"[DEBUG] Apply SVG BG: Conditions met. Attempting to add layout image and update plot_bgcolor.") # DEBUG
+            try:
+                fig.add_layout_image(
+                    source=self.svg_background_data,
+                    xref="paper", yref="paper",
+                    x=0, y=0,
+                    sizex=1, sizey=1,
+                    sizing="stretch",  # Stretch to fill the plot area
+                    layer="below",     # Place behind data traces
+                    opacity=1.0         # Full opacity
+                )
+                # Set plot_bgcolor to transparent so SVG shows through
+                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')
+                print(f"[DEBUG] Apply SVG BG: Successfully added layout image and set plot_bgcolor to transparent.") # DEBUG
+            except Exception as e:
+                print(f"[DEBUG] Apply SVG BG: Exception during Plotly calls: {type(e).__name__}") # DEBUG
+                print(f"Warning: Failed to apply SVG background for plot type '{plot_type_key}': {e}")
+        elif not use_svg_bg:
+             print(f"[DEBUG] Apply SVG BG: Skipping because 'use_svg_background' is False for '{plot_type_key}'.") # DEBUG
+        elif not self.svg_background_data:
+             print(f"[DEBUG] Apply SVG BG: Skipping because SVG data was not loaded (self.svg_background_data is None).") # DEBUG
+    # --------------------------

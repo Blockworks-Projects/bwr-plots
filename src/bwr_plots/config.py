@@ -7,6 +7,7 @@ DEFAULT_BWR_CONFIG = {
         "width": 1920,
         "height": 1080,
         "template": "plotly_white",
+        "svg_background_path": "brand-assets/black_gradient_background.svg",
     },
     "colors": {
         "background_color": "#1A1A1A",
@@ -88,7 +89,7 @@ DEFAULT_BWR_CONFIG = {
         "traceorder": "reversed",
     },
     "annotations": {
-        "default_source_y": -0.10,
+        "default_source_y": -0.16,
         "default_source_x": 1.002,
         "xanchor": "right",
         "yanchor": "top",
@@ -149,15 +150,18 @@ DEFAULT_BWR_CONFIG = {
             "default_fill_color": None,
             "line_shape": "spline",
             "line_smoothing": 0.3,
+            "use_svg_background": True,
         },
         "metric_share_area": {
             "stackgroup": "one",
             "y_tickformat": ".0%",
             "y_range": [0, 1],
             "legend_marker_symbol": "circle",
+            "use_svg_background": True,
         },
         "bar": {
             "bargap": 0.15,
+            "use_svg_background": False,
         },
         "horizontal_bar": {
             "orientation": "h",
@@ -168,6 +172,7 @@ DEFAULT_BWR_CONFIG = {
             "bar_height": 0.7,
             "bargap": 0.15,
             "yaxis_automargin": True,
+            "use_svg_background": True,
         },
         "multi_bar": {
             "default_scale_values": True,
@@ -179,6 +184,7 @@ DEFAULT_BWR_CONFIG = {
             "orientation": "v",
             "textposition": "outside",
             "legend_marker_symbol": "circle",
+            "use_svg_background": True,
         },
         "stacked_bar": {
             "default_sort_descending": False,
@@ -188,6 +194,7 @@ DEFAULT_BWR_CONFIG = {
             "default_scale_values": True,
             "y_tickformat": ",.0f",
             "legend_marker_symbol": "circle",
+            "use_svg_background": True,
         },
         # Table plot configuration
         "table": {
