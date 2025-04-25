@@ -11,6 +11,7 @@ ENV/
 # IDE files
 .vscode/
 .idea/
+.pytest_cache/
 
 # Build artifacts
 dist/

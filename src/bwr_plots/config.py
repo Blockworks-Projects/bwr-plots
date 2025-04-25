@@ -7,7 +7,7 @@ DEFAULT_BWR_CONFIG = {
         "width": 1920,
         "height": 1080,
         "template": "plotly_white",
-        "svg_background_path": "brand-assets/black_gradient_background.svg",
+        "svg_background_path": "brand-assets/bg_black_TURNEDOFFRIGHTNOW.svg",
     },
     "colors": {
         "background_color": "#1A1A1A",
@@ -198,11 +198,11 @@ DEFAULT_BWR_CONFIG = {
         },
         # Table plot configuration
         "table": {
-            "header_fill_color": "#5637cd",  # Use primary color
-            "cell_fill_color_odd": "#2a2a2a",  # Slightly off-background
+            "header_fill_color": "#2a2a2a",  # Use primary color
+            "cell_fill_color_odd": "#1A1A1A",  # Slightly off-background
             "cell_fill_color_even": "#1A1A1A",  # Background color
             "line_color": "#404040",  # Dark grey lines
-            "cell_height": 30,
+            "cell_height": 60,
             # Font keys are optional; fallback logic in core.py
             # "header_font_key": "table_header",
             # "cell_font_key": "table_cell",

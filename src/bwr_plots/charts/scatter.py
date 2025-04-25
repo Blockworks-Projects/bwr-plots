@@ -35,6 +35,9 @@ def _add_scatter_traces(
             if pd.api.types.is_numeric_dtype(primary_data[col]):
                 trace_color = next(color_palette)
                 # Add the main trace
+                if primary_data is not None:
+                    print(f"[DEBUG _add_scatter_traces] Index type received for primary trace: {primary_data.index.dtype}")
+                    print(f"[DEBUG _add_scatter_traces] First 5 index values for primary trace: {primary_data.index[:5].tolist()}")
                 fig.add_trace(
                     go.Scatter(
                         x=primary_data.index,

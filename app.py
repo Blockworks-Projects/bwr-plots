@@ -82,14 +82,28 @@ def load_data(uploaded_file) -> Optional[pd.DataFrame]:
     try:
         file_extension = uploaded_file.name.split(".")[-1].lower()
         if file_extension == "csv":
-            # Try detecting separator, fall back to comma
+            # --- MODIFICATION START ---
             try:
+                # Try with auto-detection first, BUT disable date parsing
+                print("[DEBUG load_data] Attempting CSV read with parse_dates=False...")
                 df = pd.read_csv(
-                    uploaded_file, sep=None, engine="python"
-                )  # Use python engine for sep=None
-            except Exception:
-                uploaded_file.seek(0)  # Reset file pointer after failed attempt
-                df = pd.read_csv(uploaded_file)  # Default to comma
+                    uploaded_file,
+                    sep=None,
+                    engine="python",
+                    parse_dates=False, # ADD THIS ARGUMENT
+                    infer_datetime_format=False # ADD THIS ARGUMENT
+                )
+            except Exception as e_csv1:
+                print(f"[DEBUG load_data] First CSV read attempt failed: {e_csv1}")
+                uploaded_file.seek(0)
+                # Fallback read, also disable date parsing
+                print("[DEBUG load_data] Attempting fallback CSV read with parse_dates=False...")
+                df = pd.read_csv(
+                    uploaded_file,
+                    parse_dates=False, # ADD THIS ARGUMENT
+                    infer_datetime_format=False # ADD THIS ARGUMENT
+                )
+            # --- MODIFICATION END ---
         elif file_extension == "xlsx":
             df = pd.read_excel(uploaded_file, engine="openpyxl")
         else:
@@ -99,6 +113,10 @@ def load_data(uploaded_file) -> Optional[pd.DataFrame]:
             return None
 
         st.success(f"Successfully loaded `{uploaded_file.name}`")
+        # --- ADD DEBUG PRINT STATEMENT ---
+        print(f"[DEBUG load_data] DataFrame info AFTER loading:")
+        print(df.info())
+        # --- END DEBUG PRINT STATEMENT ---
         return df
     except Exception as e:
         st.error(f"Error loading data from file: {e}")
@@ -138,21 +156,14 @@ def build_plot(
     plotter: "BWRPlots",
     plot_type_display: str,
     column_mappings: dict, # Pass the mappings dict
-    # Styling arguments remain
     title: str,
     subtitle: str,
     source: str,
     prefix: str,
     suffix: str,
-    # REMOVE: index_col: str,
-    # REMOVE: timeseries_bar_style: Optional[str] = None,
-    # REMOVE: lookback_days: Optional[int] = 0,
-    # REMOVE: smoothing_window: Optional[int] = 0,
-    # REMOVE: resample_freq: Optional[str] = None,
-    # REMOVE: resample_agg: Optional[str] = 'sum',
-    **styling_kwargs, # Keep for potential future styling args
+    xaxis_is_date: bool,
+    **styling_kwargs,
 ):
-    # Prepare base arguments (excluding data which is already processed)
     plot_args_base = dict(
         title=title,
         subtitle=subtitle,
@@ -161,24 +172,18 @@ def build_plot(
         suffix=suffix,
         save_image=False,
         open_in_browser=False,
-        **column_mappings, # Pass column mappings needed by specific plots
+        xaxis_is_date=xaxis_is_date,
+        **column_mappings,
         **styling_kwargs,
     )
-
-    # Data is already processed, just pass it
-    plot_args = {**plot_args_base, "data": df} # df is the processed data
-
+    plot_args = {**plot_args_base, "data": df}
     try:
-        # Get the correct plot function name from the updated PLOT_TYPES
         func_name = PLOT_TYPES.get(plot_type_display)
         if not func_name or not hasattr(plotter, func_name):
             st.error(f"Plot type '{plot_type_display}' is not implemented correctly.")
             return None
         plot_function = getattr(plotter, func_name)
-
-        # Call the plot function
         return plot_function(**plot_args)
-
     except Exception as exc:
         st.error(f"Plot generation failed for '{plot_type_display}':")
         st.exception(exc)
@@ -262,7 +267,7 @@ if df is not None and plotter is not None:
             original_cols_options = get_column_options(st.session_state.df) if 'df' in st.session_state and st.session_state.df is not None else ['<None>']
             current_original_cols = [c for c in original_cols_options if c != '<None>']
             if plot_type_display in INDEX_REQUIRED_PLOTS:
-                st.markdown('##### Select Index Column (X-axis)')
+                st.markdown('##### Select X-axis Column')
                 potential_date_col = find_potential_date_col(st.session_state.df)
                 default_index_pos = 0
                 if potential_date_col and potential_date_col in original_cols_options:
@@ -270,17 +275,34 @@ if df is not None and plotter is not None:
                         default_index_pos = original_cols_options.index(potential_date_col)
                     except ValueError:
                         default_index_pos = 0
-                st.selectbox(
-                    'Column to use as time index',
-                    options=original_cols_options,
-                    index=default_index_pos,
-                    key='data_index_col',
-                    help='Select the column containing date/time information for the X-axis.'
-                )
+
+                # Use columns for inline layout
+                col_select, col_check = st.columns([3, 1])
+
+                with col_select:
+                    st.selectbox(
+                        'Column to use as x-axis',
+                        options=original_cols_options,
+                        index=default_index_pos,
+                        key='data_index_col',
+                        help='Select the column for the X-axis. Check "Is Date?" if it contains dates/times.'
+                    )
+
+                with col_check:
+                    st.markdown("")
+                    st.checkbox(
+                        "Is Date?",
+                        value=True,
+                        key='data_xaxis_is_date',
+                        help="Check if the selected x-axis column contains dates or timestamps."
+                    )
             else:
                 if 'data_index_col' not in st.session_state:
                     st.session_state.data_index_col = '<None>'
                 st.session_state.data_index_col = '<None>'
+                if 'data_xaxis_is_date' not in st.session_state:
+                    st.session_state.data_xaxis_is_date = True
+                st.session_state.setdefault('data_xaxis_is_date', True)
 
             # --- 1. Drop Columns ---
             with st.expander("Drop Columns"):
@@ -485,21 +507,63 @@ if df is not None and plotter is not None:
                 elif plot_type_display in INDEX_REQUIRED_PLOTS:
                     if index_col_current_name != "<None>":
                         try:
-                            processed_df[index_col_current_name] = pd.to_datetime(processed_df[index_col_current_name], errors='coerce')
-                            if processed_df[index_col_current_name].isnull().any():
-                                st.warning(f"Some values in index column '{index_col_current_name}' could not be converted to dates (set to NaT). Dropping these rows.")
-                            processed_df = processed_df.dropna(subset=[index_col_current_name]).set_index(index_col_current_name).sort_index()
-                            st.info(f"Set index to '{index_col_current_name}' and sorted.")
+                            is_date_checked = st.session_state.get('data_xaxis_is_date', True)
+
+                            if is_date_checked:
+                                st.info(f"Processing x-axis column '{index_col_current_name}' as Date/Time.")
+                                processed_df[index_col_current_name] = pd.to_datetime(processed_df[index_col_current_name], errors='coerce')
+                                if processed_df[index_col_current_name].isnull().any():
+                                    st.warning(f"Some values in index column '{index_col_current_name}' could not be converted to dates (set to NaT). Dropping these rows.")
+                                processed_df = processed_df.dropna(subset=[index_col_current_name])
+                            else:
+                                st.info(f"Processing x-axis column '{index_col_current_name}' as non-Date/Time (forcing string type).")
+                                if index_col_current_name in processed_df.columns:
+                                    # Explicitly convert the column to string BEFORE setting index
+                                    try:
+                                        from termcolor import colored
+                                        print(colored(f"[DEBUG app.py] BEFORE string conversion - Column '{index_col_current_name}' sample:\n{processed_df[index_col_current_name].head().to_string()}", 'cyan'))
+                                        processed_df[index_col_current_name] = processed_df[index_col_current_name].astype(str)
+                                        print(colored(f"[DEBUG app.py] Converted column '{index_col_current_name}' to string type before setting index.", 'green'))
+                                        print(colored(f"[DEBUG app.py] Dtype of column '{index_col_current_name}' now: {processed_df[index_col_current_name].dtype}", 'yellow'))
+                                        print(colored(f"[DEBUG app.py] AFTER string conversion - Column '{index_col_current_name}' sample:\n{processed_df[index_col_current_name].head().to_string()}", 'cyan'))
+                                    except Exception as e_astype:
+                                         st.error(f"Failed to convert column '{index_col_current_name}' to string: {e_astype}")
+                                         st.stop()
+                                else:
+                                     st.error(f"Column '{index_col_current_name}' selected for index not found before type conversion.")
+                                     st.stop()
+
+                            # Always set the index
+                            if index_col_current_name in processed_df.columns:
+                                processed_df = processed_df.set_index(index_col_current_name)
+                                try:
+                                    processed_df = processed_df.sort_index()
+                                    st.info(f"Set index to '{index_col_current_name}' and sorted.")
+                                    # Add a debug print AFTER setting the index
+                                    from termcolor import colored
+                                    print(colored(f"[DEBUG app.py] Index set to '{processed_df.index.name}'. Final Index dtype: {processed_df.index.dtype}", 'magenta'))
+                                    print(colored(f"[DEBUG app.py] Final Index sample: {processed_df.index[:5].tolist()}", 'magenta'))
+                                except TypeError:
+                                    st.warning(f"Could not sort index '{index_col_current_name}' (likely mixed types). Proceeding without sorting.")
+                                    st.info(f"Set index to '{index_col_current_name}'.")
+                            else:
+                                st.error(f"Column '{index_col_current_name}' selected for index not found after processing steps.")
+                                st.stop()
+
                             data_for_plot = processed_df
                         except Exception as e:
-                            st.error(f"Failed to set index to '{index_col_current_name}': {e}")
+                            st.error(f"Failed to set index or process column '{index_col_current_name}': {e}")
+                            st.exception(e)
                             st.stop()
                 else:
                     data_for_plot = processed_df
 
                 # --- 6. Apply Filtering, Resampling, Smoothing (to data_for_plot if DataFrame) ---
                 if isinstance(data_for_plot, pd.DataFrame) and not data_for_plot.empty:
-                    if isinstance(data_for_plot.index, pd.DatetimeIndex):
+                    is_date_checked = st.session_state.get('data_xaxis_is_date', True)
+                    is_datetime_index = isinstance(data_for_plot.index, pd.DatetimeIndex)
+
+                    if is_date_checked and is_datetime_index:
                         if filter_mode == "Lookback" and lookback_days > 0:
                             end_date_filter = data_for_plot.index.max()
                             start_date_filter = end_date_filter - pd.Timedelta(days=lookback_days - 1)
@@ -516,20 +580,28 @@ if df is not None and plotter is not None:
                                     st.warning("Invalid date format for filtering (use DD-MM-YYYY). Filter not applied.")
                             except Exception as e:
                                 st.error(f"Error applying date window filter: {e}")
-                    if resample_freq != "<None>" and isinstance(data_for_plot.index, pd.DatetimeIndex):
+                    elif filter_mode != "Lookback" or lookback_days != 0 or start_date_str or end_date_str:
+                        st.warning("Time-based filtering skipped: X-axis is not processed as Date/Time.")
+
+                    if resample_freq != "<None>" and is_date_checked and is_datetime_index:
                         try:
                             numeric_cols = data_for_plot.select_dtypes(include='number').columns
                             data_for_plot = data_for_plot[numeric_cols].resample(resample_freq).sum()
                             st.info(f"Resampled data to '{resample_freq}' frequency (sum).")
                         except Exception as e:
                             st.error(f"Failed to resample data: {e}")
-                    if smoothing_window > 1:
+                    elif resample_freq != "<None>":
+                        st.warning(f"Resampling skipped: X-axis is not processed as Date/Time.")
+
+                    if smoothing_window > 1 and is_date_checked and is_datetime_index:
                         try:
                             numeric_cols = data_for_plot.select_dtypes(include='number').columns
                             data_for_plot[numeric_cols] = data_for_plot[numeric_cols].rolling(window=smoothing_window, min_periods=1).mean()
                             st.info(f"Applied {smoothing_window}-period rolling average.")
                         except Exception as e:
                             st.error(f"Failed to apply smoothing: {e}")
+                    elif smoothing_window > 1:
+                        st.warning("Smoothing skipped: X-axis is not processed as Date/Time.")
 
                 # --- 7. Final Check and Plotting ---
                 if data_for_plot is None or data_for_plot.empty:
@@ -577,6 +649,16 @@ if df is not None and plotter is not None:
                         st.stop()
                     
                     with st.spinner("Generating plot..."):
+                        # --- START DEBUG PRINTS (app.py) ---
+                        st.warning(f"DEBUG app.py: xaxis_is_date_flag = {st.session_state.get('data_xaxis_is_date', 'NOT_SET')}")
+                        if isinstance(data_for_plot, (pd.DataFrame, pd.Series)) and not data_for_plot.empty:
+                            st.warning(f"DEBUG app.py: data_for_plot index type = {data_for_plot.index.dtype}")
+                            st.warning(f"DEBUG app.py: data_for_plot index head = {data_for_plot.index[:5]}")
+                        else:
+                            st.warning(f"DEBUG app.py: data_for_plot is None or empty.")
+                        # --- END DEBUG PRINTS (app.py) ---
+
+                        xaxis_is_date_flag = st.session_state.get('data_xaxis_is_date', True)
                         fig = build_plot(
                             df=data_for_plot,
                             plotter=plotter,
@@ -587,6 +669,7 @@ if df is not None and plotter is not None:
                             source=plot_source,
                             prefix=y_prefix,
                             suffix=y_suffix,
+                            xaxis_is_date=xaxis_is_date_flag,
                         )
                         if fig:
                             # --- REPLACE: Plotly chart rendering with scrollable HTML container ---

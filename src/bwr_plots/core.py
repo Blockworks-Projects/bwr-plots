@@ -391,36 +391,62 @@ class BWRPlots:
         )
 
     def _ensure_datetime_index(
-        self, data: Union[pd.DataFrame, pd.Series]
+        self, data: Union[pd.DataFrame, pd.Series], xaxis_is_date: bool = True
     ) -> Union[pd.DataFrame, pd.Series]:
-        """
-        Attempts to convert the index of a DataFrame or Series to datetime.
-        Returns the original data if conversion fails.
-
-        Args:
-            data: DataFrame or Series whose index should be converted
-
-        Returns:
-            DataFrame or Series with datetime index if conversion succeeded,
-            original data otherwise
-        """
-        if data is None or data.empty:
+        if data is None or data.empty or not xaxis_is_date:
             return data
-
         if not isinstance(data.index, pd.DatetimeIndex):
             try:
-                original_name = data.index.name  # Preserve index name if any
-                data_copy = data.copy()  # Avoid modifying original if conversion fails
+                original_name = data.index.name
+                data_copy = data.copy()
                 data_copy.index = pd.to_datetime(data_copy.index, errors="raise")
-                data_copy.index.name = original_name  # Restore index name
+                data_copy.index.name = original_name
                 return data_copy
             except Exception as e:
                 print(
                     f"[WARNING] _ensure_datetime_index: Could not convert index to datetime: {e}. Proceeding with original index type."
                 )
-                return data  # Return original on failure
+                return data
         else:
-            return data  # Already datetime
+            return data
+
+    def _prepare_xaxis_data(self, data: Union[pd.DataFrame, pd.Series], xaxis_is_date: bool) -> Union[pd.DataFrame, pd.Series]:
+        """
+        Ensures the index is appropriate for the x-axis type for plotting traces.
+        If xaxis_is_date is False and the index is numeric, converts it to string
+        to prevent Plotly traces from misinterpreting it as a timestamp.
+        If xaxis_is_date is True, ensures the index is datetime.
+        """
+        if data is None or data.empty:
+            print("[DEBUG _prepare_xaxis_data] Received None or empty data, returning as is.")
+            return data
+
+        print(f"[DEBUG _prepare_xaxis_data] Processing data with index type: {data.index.dtype}, xaxis_is_date: {xaxis_is_date}")
+
+        if xaxis_is_date:
+            # If it's supposed to be a date, ensure it is (using existing logic)
+            print("[DEBUG _prepare_xaxis_data] xaxis_is_date is True, ensuring datetime index.")
+            return self._ensure_datetime_index(data, xaxis_is_date=True)
+        else:
+            # If it's NOT a date, check if the index is numeric.
+            # Avoid converting if it's already object/string/category type.
+            if pd.api.types.is_numeric_dtype(data.index.dtype):
+                try:
+                    # Work on a copy to avoid modifying original data unexpectedly elsewhere
+                    data_copy = data.copy()
+                    data_copy.index = data_copy.index.astype(str)
+                    print(f"[DEBUG _prepare_xaxis_data] Converted numeric index (dtype: {data.index.dtype}) to string because xaxis_is_date is False.")
+                    print(f"[DEBUG _prepare_xaxis_data] Index type AFTER conversion: {data_copy.index.dtype}")
+                    print(f"[DEBUG _prepare_xaxis_data] First 5 index values AFTER conversion: {data_copy.index[:5].tolist()}")
+                    return data_copy
+                except Exception as e:
+                    print(f"Warning: Failed to convert numeric index to string in _prepare_xaxis_data: {e}")
+                    # Return original data if conversion fails
+                    return data
+            else:
+                # Index is already non-numeric (e.g., string, category, potentially already datetime), leave it as is.
+                print(f"[DEBUG _prepare_xaxis_data] Index is already non-numeric (dtype: {data.index.dtype}), returning as is for non-date axis.")
+                return data
 
     def _apply_common_layout(
         self,
@@ -617,6 +643,7 @@ class BWRPlots:
         axis_options: Optional[Dict] = None,
         is_secondary: bool = False,
         axis_min_calculated: Optional[float] = None,
+        xaxis_is_date: bool = True
     ) -> None:
         """
         Apply common X and Y axis styling to a figure.
@@ -628,7 +655,6 @@ class BWRPlots:
         """
         cfg_axes = self.config["axes"]
         cfg_fonts = self.config["fonts"]
-
         default_opts = {
             "primary_title": cfg_axes["y_primary_title_text"],
             "secondary_title": cfg_axes["y_secondary_title_text"],
@@ -647,16 +673,37 @@ class BWRPlots:
         merged_options = default_opts.copy()
         if axis_options:
             merged_options.update(axis_options)
+        # --- UPDATED LOGIC ---
+        xaxis_type = merged_options.get('x_type', 'linear')
+        if not xaxis_is_date and xaxis_type == 'date':
+            xaxis_type = 'category'
+            try:
+                from termcolor import colored
+                print(colored(f"[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.", "yellow"))
+            except ImportError:
+                print("[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.")
+        # --- MODIFIED LOGIC ---
+        if xaxis_is_date:
+            xaxis_tickformat = merged_options["x_tickformat"]  # Use configured date format
+        else:
+            xaxis_tickformat = ""  # Use empty string for default numeric formatting
+        # --- End MODIFIED LOGIC ---
 
-        # Remove standoff from tickfont; add ticklabelstandoff directly to axis
+        # --- START DEBUG PRINTS (core.py) ---
+        # print(f"[DEBUG _apply_common_axes] Received xaxis_is_date: {xaxis_is_date}")
+        # print(f"[DEBUG _apply_common_axes] Determined xaxis_type: {xaxis_type}")
+        # print(f"[DEBUG _apply_common_axes] Determined xaxis_tickformat: '{xaxis_tickformat}'") # Check format string
+        # --- END DEBUG PRINTS (core.py) ---
+
         fig.update_xaxes(
+            type=xaxis_type,
             title=dict(
                 text=cfg_axes["x_title_text"], font=self._get_font_dict("axis_title")
             ),
-            showline=True,                     # Change: Make the axis line visible
-            linewidth=cfg_axes.get("gridwidth", 2.5), # Change: Use gridwidth for thickness
-            linecolor=cfg_axes.get("y_gridcolor", "rgb(38, 38, 38)"), # Change: Use grid color
-            tickcolor=cfg_axes["y_gridcolor"],  # Use y-axis grid color for ticks
+            showline=True,
+            linewidth=cfg_axes.get("gridwidth", 2.5),
+            linecolor=cfg_axes.get("y_gridcolor", "rgb(38, 38, 38)"),
+            tickcolor=cfg_axes["y_gridcolor"],
             showgrid=cfg_axes["showgrid_x"],
             gridcolor=cfg_axes["x_gridcolor"],
             gridwidth=cfg_axes.get("gridwidth", 1),
@@ -665,7 +712,7 @@ class BWRPlots:
             ticklen=cfg_axes["x_ticklen"],
             ticklabelstandoff=0,
             nticks=merged_options["x_nticks"],
-            tickformat=merged_options["x_tickformat"],
+            tickformat=xaxis_tickformat,
             tickfont=self._get_font_dict("tick"),
             zeroline=False,
             zerolinewidth=0,
@@ -849,6 +896,7 @@ class BWRPlots:
         suffix: Optional[str] = None,
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
+        xaxis_is_date: bool = True,
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -922,9 +970,9 @@ class BWRPlots:
             secondary_data_orig = pd.DataFrame(secondary_data_orig)
 
         # Attempt index conversion early
-        primary_data_orig = self._ensure_datetime_index(primary_data_orig)
+        primary_data_orig = self._ensure_datetime_index(primary_data_orig, xaxis_is_date=xaxis_is_date)
         secondary_data_orig = (
-            self._ensure_datetime_index(secondary_data_orig) if has_secondary else None
+            self._ensure_datetime_index(secondary_data_orig, xaxis_is_date=xaxis_is_date) if has_secondary else None
         )
 
         # --- Determine Effective Date ---
@@ -1074,6 +1122,35 @@ class BWRPlots:
         if min_date is not None and max_date is not None:
             local_axis_options["x_range"] = [min_date, max_date]
 
+        # --- Determine xaxis_type and add to axis options ---
+        effective_xaxis_type = 'linear'  # Default
+        data_source_for_index_check = scaled_primary_data
+        if data_source_for_index_check is not None and not data_source_for_index_check.empty:
+            if xaxis_is_date:
+                effective_xaxis_type = 'date'
+            else:
+                index_dtype = data_source_for_index_check.index.dtype
+                if pd.api.types.is_numeric_dtype(index_dtype):
+                    effective_xaxis_type = 'linear'
+                else:
+                    effective_xaxis_type = 'category'
+                    local_axis_options['x_tickformat'] = None
+                    try:
+                        from termcolor import colored
+                        print(colored(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}", "cyan"))
+                    except ImportError:
+                        print(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}")
+        local_axis_options['x_type'] = effective_xaxis_type
+
+        # --- >>> START INSERTION for scatter_plot <<< ---
+        # Prepare index type based on xaxis_is_date flag BEFORE passing to trace function
+        print("[DEBUG scatter_plot] Calling _prepare_xaxis_data for primary data...")
+        scaled_primary_data = self._prepare_xaxis_data(scaled_primary_data, xaxis_is_date)
+        if has_secondary:
+            print("[DEBUG scatter_plot] Calling _prepare_xaxis_data for secondary data...")
+            scaled_secondary_data = self._prepare_xaxis_data(scaled_secondary_data, xaxis_is_date)
+        # --- >>> END INSERTION for scatter_plot <<< ---
+
         # --- Call the Chart Function ---
         _add_scatter_traces(
             fig=fig,
@@ -1104,7 +1181,8 @@ class BWRPlots:
             fig,
             local_axis_options,
             is_secondary=has_secondary,
-            axis_min_calculated=axis_min_calculated
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=xaxis_is_date
         )
 
         # --- ADD THIS CALL ---
@@ -1144,6 +1222,7 @@ class BWRPlots:
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
         plot_area_b_padding: Optional[int] = None,
+        xaxis_is_date: bool = True,
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -1195,7 +1274,13 @@ class BWRPlots:
             plot_data = data.copy()
 
         # Attempt index conversion
-        plot_data = self._ensure_datetime_index(plot_data)
+        plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
+
+        # --- >>> START INSERTION for metric_share_area_plot <<< ---
+        # Prepare index type based on xaxis_is_date flag BEFORE normalization/trace function
+        print("[DEBUG metric_share_area_plot] Calling _prepare_xaxis_data...")
+        plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
+        # --- >>> END INSERTION for metric_share_area_plot <<< ---
 
         # Normalize data rows to sum to 1 (100%)
         numeric_data = plot_data.select_dtypes(include=np.number)
@@ -1287,6 +1372,26 @@ class BWRPlots:
             else:
                 local_axis_options["x_tickvals"] = tickvals
 
+        # --- Determine xaxis_type and add to axis options ---
+        effective_xaxis_type = 'linear'  # Default
+        data_source_for_index_check = normalized_data
+        if data_source_for_index_check is not None and not data_source_for_index_check.empty:
+            if xaxis_is_date:
+                effective_xaxis_type = 'date'
+            else:
+                index_dtype = data_source_for_index_check.index.dtype
+                if pd.api.types.is_numeric_dtype(index_dtype):
+                    effective_xaxis_type = 'linear'
+                else:
+                    effective_xaxis_type = 'category'
+                    local_axis_options['x_tickformat'] = None
+                    try:
+                        from termcolor import colored
+                        print(colored(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}", "cyan"))
+                    except ImportError:
+                        print(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}")
+        local_axis_options['x_type'] = effective_xaxis_type
+
         # --- Call the Chart Function ---
         _add_metric_share_area_traces(
             fig=fig, data=normalized_data, cfg_plot=cfg_plot, cfg_colors=cfg_colors
@@ -1309,7 +1414,8 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=xaxis_is_date
         )
 
         # --- ADD THIS CALL ---
@@ -1544,7 +1650,8 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=False # Bar charts have categorical x-axis
         )
 
         # --- ADD THIS CALL ---
@@ -1796,6 +1903,8 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=False # Horizontal bar charts have categorical y-axis (value x-axis is not date-based)
         )
 
         # --- ADD THIS CALL ---
@@ -1840,6 +1949,7 @@ class BWRPlots:
         tick_frequency: Optional[int] = None,
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
+        xaxis_is_date: bool = True,
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -1909,7 +2019,13 @@ class BWRPlots:
         plot_data = data.copy()
 
         # Attempt index conversion
-        plot_data = self._ensure_datetime_index(plot_data)
+        plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
+
+        # --- >>> START INSERTION for multi_bar <<< ---
+        # Prepare index type based on xaxis_is_date flag BEFORE grouping/trace function
+        print("[DEBUG multi_bar] Calling _prepare_xaxis_data...")
+        plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
+        # --- >>> END INSERTION for multi_bar <<< ---
 
         # Group data if requested
         if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
@@ -2034,7 +2150,8 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=xaxis_is_date
         )
 
         # --- ADD THIS CALL ---
@@ -2079,6 +2196,7 @@ class BWRPlots:
         suffix: Optional[str] = None,
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
+        xaxis_is_date: bool = True,
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -2145,7 +2263,13 @@ class BWRPlots:
         plot_data = data.copy()
 
         # Attempt index conversion
-        plot_data = self._ensure_datetime_index(plot_data)
+        plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
+
+        # --- >>> START INSERTION for stacked_bar_chart <<< ---
+        # Prepare index type based on xaxis_is_date flag BEFORE grouping/trace function
+        print("[DEBUG stacked_bar_chart] Calling _prepare_xaxis_data...")
+        plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
+        # --- >>> END INSERTION for stacked_bar_chart <<< ---
 
         # Group data if requested
         if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
@@ -2335,7 +2459,8 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated
+            axis_min_calculated=axis_min_calculated,
+            xaxis_is_date=xaxis_is_date
         )
 
         # --- ADD THIS CALL ---
