@@ -1219,7 +1219,7 @@ class BWRPlots:
         )
 
         # --- Apply Layout & Axes ---
-        self._apply_common_layout(
+        total_height, bottom_margin = self._apply_common_layout(
             fig,
             title,
             subtitle,
@@ -1932,7 +1932,7 @@ class BWRPlots:
         )
 
         # --- Apply Layout & Axes ---
-        self._apply_common_layout(
+        total_height, bottom_margin = self._apply_common_layout(
             fig,
             title,
             subtitle,
@@ -2100,62 +2100,116 @@ class BWRPlots:
         if y_axis_title is not None:
             local_axis_options["primary_title"] = y_axis_title
 
-        axis_min_calculated = None
+        # --- NEW STACKED BAR SCALING LOGIC ---
+        # STEP 3: Calculate Max Total Bar Height (sum across rows)
+        max_total_value = 0
+        numeric_data_for_sum = plot_data.select_dtypes(include=np.number)
+        if not numeric_data_for_sum.empty:
+            row_sums = numeric_data_for_sum.sum(axis=1)
+            if not row_sums.empty:
+                max_total_value = row_sums.max(skipna=True)
+                if not pd.notna(max_total_value):
+                    max_total_value = 0
+        # Optional debug
+        try:
+            from termcolor import colored
+            print(colored(f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}", "cyan"))
+        except ImportError:
+            print(f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}")
+
+        # STEP 4: Determine Scaling Factor and Suffix (Based on Total Height)
+        scale_factor = 1.0  # Default to no scaling
+        auto_suffix = ""
+        final_suffix = suffix  # User-provided suffix takes precedence
+
+        if current_scale and pd.notna(max_total_value) and max_total_value > 0:
+            scale_factor, auto_suffix = _get_scale_and_suffix(max_total_value)
+            if final_suffix is None:
+                final_suffix = auto_suffix
+        elif suffix is not None:
+            final_suffix = suffix
+        else:
+            final_suffix = ""
+
+        try:
+            from termcolor import colored
+            print(colored(f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'", "cyan"))
+        except ImportError:
+            print(f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'")
+
+        local_axis_options["primary_suffix"] = final_suffix
+
+        # STEP 5: Calculate *Unscaled* Axis Parameters using row sums
         yaxis_params = None
-        # Only scale if requested
-        if current_scale:
-            numeric_data = plot_data.select_dtypes(include=np.number)
-            if not numeric_data.empty:
-                max_value = numeric_data.max().max(skipna=True)
-                scale = 1
-                auto_suffix = ""
-                if pd.notna(max_value):
-                    scale, auto_suffix = _get_scale_and_suffix(max_value)
-                final_suffix = suffix if suffix is not None else auto_suffix
-                local_axis_options["primary_suffix"] = final_suffix
-                # Scale data
-                if scale > 1:
-                    try:
-                        numeric_cols = plot_data.select_dtypes(
-                            include=np.number
-                        ).columns
-                        plot_data[numeric_cols] = plot_data[numeric_cols] / scale
-                    except Exception as e:
-                        print(f"Warning: Could not scale data: {e}.")
-                # --- Calculate y-axis grid params for bottom gridline ---
-                y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
-                if y_values_for_range.size > 0:
-                    yaxis_params = calculate_yaxis_grid_params(
-                        y_data=y_values_for_range,
-                        padding=0.05,
-                        num_gridlines=5
-                    )
-                    axis_min_calculated = yaxis_params["tick0"]
-                    # --- Add yaxis_params to local_axis_options ---
-                    local_axis_options["primary_range"] = yaxis_params["range"]
-                    local_axis_options["primary_tick0"] = yaxis_params["tick0"]
-                    local_axis_options["primary_dtick"] = yaxis_params["dtick"]
-                    local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
-                # --- DEBUG PRINT ---
-                import json
+        axis_min_calculated = None
+        if not numeric_data_for_sum.empty and not row_sums.empty and row_sums.notna().any():
+            valid_row_sums = row_sums.dropna()
+            if not valid_row_sums.empty:
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=valid_row_sums.values,
+                    padding=0.05,
+                    num_gridlines=5
+                )
+                axis_min_calculated = yaxis_params["tick0"]
                 try:
                     from termcolor import colored
-                    print(colored(f"[DEBUG STACKED_BAR] local_axis_options before _apply_common_axes:", "cyan"))
+                    print(colored(f"[DEBUG STACKED_BAR] Calculated yaxis_params (unscaled): {yaxis_params}", "cyan"))
                 except ImportError:
-                    print(f"[DEBUG STACKED_BAR] local_axis_options before _apply_common_axes:")
-                print(json.dumps(local_axis_options, indent=2, default=str))
+                    print(f"[DEBUG STACKED_BAR] Calculated yaxis_params (unscaled): {yaxis_params}")
             else:
-                if suffix is not None:
-                    local_axis_options["primary_suffix"] = suffix
+                print("[DEBUG STACKED_BAR] No valid (non-NaN) row sums found for axis calculation.")
+                yaxis_params = {"range": [0, 1], "tick0": 0, "dtick": 0.2, "tickmode": "linear"}
+                axis_min_calculated = 0
         else:
-            if suffix is not None:
-                local_axis_options["primary_suffix"] = suffix
+            print("[DEBUG STACKED_BAR] No numeric data or row sums available for axis calculation.")
+            yaxis_params = {"range": [0, 1], "tick0": 0, "dtick": 0.2, "tickmode": "linear"}
+            axis_min_calculated = 0
 
-        # Set tickformat from config if not overridden
+        # STEP 6: Conditionally Scale Axis Parameters for Override
+        if yaxis_params:
+            if scale_factor > 1.0:
+                local_axis_options["primary_range"] = [val / scale_factor for val in yaxis_params["range"]]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"] / scale_factor
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"] / scale_factor
+                try:
+                    from termcolor import colored
+                    print(colored(f"[DEBUG STACKED_BAR] Applied scaling to axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}", "cyan"))
+                except ImportError:
+                    print(f"[DEBUG STACKED_BAR] Applied scaling to axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}")
+            else:
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                try:
+                    from termcolor import colored
+                    print(colored(f"[DEBUG STACKED_BAR] Using unscaled axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}", "cyan"))
+                except ImportError:
+                    print(f"[DEBUG STACKED_BAR] Using unscaled axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}")
+            local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+        else:
+            print("[DEBUG STACKED_BAR] yaxis_params is None, applying default range.")
+            local_axis_options["primary_range"] = [0, 1]
+
+        # --- Ensure standard tick format is set if not otherwise specified ---
         if "primary_tickformat" not in local_axis_options:
-            local_axis_options["primary_tickformat"] = cfg_plot.get(
-                "y_tickformat", ",.0f"
-            )
+            local_axis_options["primary_tickformat"] = cfg_plot.get("y_tickformat", ",.0f")
+
+        # STEP 7: Remove/Comment Out Old Scaling Logic
+        # (Old logic removed)
+
+        # STEP 8: Apply Scaling to Plot Data (for Traces) - Place *before* _add_stacked_bar_traces
+        if scale_factor > 1.0:
+            try:
+                numeric_cols_to_scale = plot_data.select_dtypes(include=np.number).columns
+                if not numeric_cols_to_scale.empty:
+                    plot_data[numeric_cols_to_scale] = plot_data[numeric_cols_to_scale] / scale_factor
+                    try:
+                        from termcolor import colored
+                        print(colored(f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}", "cyan"))
+                    except ImportError:
+                        print(f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}")
+            except Exception as e:
+                print(f"Warning: Could not scale plot_data before adding traces: {e}.")
 
         # --- Call the Chart Function ---
         _add_stacked_bar_traces(

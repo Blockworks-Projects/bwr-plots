@@ -576,25 +576,6 @@ if df is not None and plotter is not None:
                         st.error("Plotter instance not available.")
                         st.stop()
                     
-                    # --- BEGIN: CSS Injection for Fixed Size Plot ---
-                    # Inject CSS to make the container scrollable
-                    st.markdown(f"""
-                    <style>
-                    /* Target the specific div Streamlit uses for Plotly charts */
-                    div[data-testid="stPlotlyChart"] {{
-                        /* Allow the container to scroll vertically and horizontally */
-                        /* if the content (the fixed-size plot) overflows */
-                        overflow: auto;
-
-                        /* Optional: Define a max-height/width for the container if needed, */
-                        /* but overflow: auto is the primary mechanism. */
-                        /* max-width: 100%; */
-                        /* max-height: 80vh; */ /* Example: limit height to 80% of viewport */
-                    }}
-                    </style>
-                    """, unsafe_allow_html=True)
-                    # --- END: CSS Injection ---
-                    
                     with st.spinner("Generating plot..."):
                         fig = build_plot(
                             df=data_for_plot,
@@ -608,11 +589,52 @@ if df is not None and plotter is not None:
                             suffix=y_suffix,
                         )
                         if fig:
-                            st.plotly_chart(fig, use_container_width=False)
-                            html_string = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})
+                            # --- REPLACE: Plotly chart rendering with scrollable HTML container ---
+                            try:
+                                # 1. Generate HTML snippet for the plot
+                                plot_html = fig.to_html(
+                                    include_plotlyjs='cdn',
+                                    full_html=False,
+                                    config={'displayModeBar': True}
+                                )
+
+                                # 2. Define CSS for the scrollable container
+                                fig_width = getattr(fig.layout, 'width', 1920) or 1920
+                                fig_height = getattr(fig.layout, 'height', 1080) or 1080
+                                container_css = f"""
+                                    overflow: auto;
+                                    max-width: 100%;
+                                    max-height: 200vh;
+                                    width: {fig_width}px;
+                                    height: {fig_height}px;
+                                    border: 2px solid #444;
+                                """
+
+                                # 3. Wrap plot HTML in the styled div
+                                html_to_render = f"""
+                                <div style=\"{container_css}\">
+                                    {plot_html}
+                                </div>
+                                """
+
+                                # 4. Use st.components.v1.html to render
+                                component_height = fig_height + 150  # Add larger buffer for scrollbars
+                                st.components.v1.html(
+                                    html_to_render,
+                                    height=component_height,
+                                    scrolling=False
+                                )
+                            except Exception as e:
+                                from termcolor import colored
+                                st.error(colored(f"Failed to render plot in scrollable container: {e}", 'red'))
+                                st.exception(e)
+                            # --- END REPLACEMENT ---
+
+                            # Keep the download button logic (using the full HTML version)
+                            html_string_full = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})
                             st.download_button(
                                 label="Download Plot as HTML",
-                                data=html_string.encode('utf-8'),
+                                data=html_string_full.encode('utf-8'),
                                 file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
                                 mime="text/html",
                             )
