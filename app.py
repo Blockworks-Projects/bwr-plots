@@ -257,6 +257,31 @@ if df is not None and plotter is not None:
                 original_cols = st.session_state.df.columns.astype(str).tolist()
             col_options = ["<None>"] + original_cols # For index select
 
+            # --- Index Column Selection (NEW) ---
+            # Only show for time-series plot types
+            original_cols_options = get_column_options(st.session_state.df) if 'df' in st.session_state and st.session_state.df is not None else ['<None>']
+            current_original_cols = [c for c in original_cols_options if c != '<None>']
+            if plot_type_display in INDEX_REQUIRED_PLOTS:
+                st.markdown('##### Select Index Column (X-axis)')
+                potential_date_col = find_potential_date_col(st.session_state.df)
+                default_index_pos = 0
+                if potential_date_col and potential_date_col in original_cols_options:
+                    try:
+                        default_index_pos = original_cols_options.index(potential_date_col)
+                    except ValueError:
+                        default_index_pos = 0
+                st.selectbox(
+                    'Column to use as time index',
+                    options=original_cols_options,
+                    index=default_index_pos,
+                    key='data_index_col',
+                    help='Select the column containing date/time information for the X-axis.'
+                )
+            else:
+                if 'data_index_col' not in st.session_state:
+                    st.session_state.data_index_col = '<None>'
+                st.session_state.data_index_col = '<None>'
+
             # --- 1. Drop Columns ---
             with st.expander("Drop Columns"):
                 cols_to_drop = st.multiselect(
@@ -277,133 +302,118 @@ if df is not None and plotter is not None:
                 # Store the rename map in session state (important!)
                 st.session_state.data_rename_map = rename_map
 
-            # --- 3. Set Index (Conditional) ---
-            if plot_type_display in INDEX_REQUIRED_PLOTS:
-                st.markdown("##### Index (for Time Series Charts)")
-                potential_date_col = find_potential_date_col(st.session_state.df) # Assumes df is loaded
-                # Filter options based on columns NOT dropped
-                current_col_options = ["<None>"] + [c for c in original_cols if c not in cols_to_drop]
-                # Try to find the potential date col among remaining columns
-                default_index_val = "<None>"
-                if potential_date_col and potential_date_col not in cols_to_drop:
-                   default_index_val = potential_date_col
+            # --- 3. Bar Chart Specific Settings ---
+            # (REMOVED: No Bar Chart-specific UI. Only Drop/Rename Columns remain visible for Bar Chart)
+            # (Index, Filter, Resample, Smooth, and Column Mapping UI remain for other plot types)
+            if plot_type_display != "Bar Chart":
+                # --- 4. Filter (Lookback/Window) (Conditional) ---
+                if plot_type_display in FILTERING_PLOT_TYPES:
+                    st.markdown("##### Filter Data (Time Series)")
+                    filter_mode = st.radio(
+                        "Filter by:",
+                        ["Lookback", "Date Window"],
+                        key="data_filter_mode",
+                        horizontal=True,
+                        index=0 # Default to Lookback
+                    )
 
-                # Adjust default index based on availability after drop/rename logic might be complex,
-                # consider just finding it in the *current* options
-                default_idx = 0
-                if default_index_val in current_col_options:
-                    default_idx = current_col_options.index(default_index_val)
+                    if filter_mode == "Lookback":
+                        st.number_input(
+                            "Lookback Period (days, 0=all)",
+                            min_value=0,
+                            step=1,
+                            value=st.session_state.get("data_lookback_days", 0), # Persist value
+                            key="data_lookback_days",
+                            help="Number of days of data to show, counting back from the latest date. 0 uses all available data.",
+                        )
+                        # Clear window values if switching to lookback
+                        st.session_state.data_window_start = ""
+                        st.session_state.data_window_end = ""
+                    else: # Date Window
+                        st.text_input(
+                            "Start Date (DD-MM-YYYY)",
+                            key="data_window_start",
+                            placeholder="e.g., 01-01-2023",
+                            value=st.session_state.get("data_window_start", "") # Persist value
+                        )
+                        st.text_input(
+                            "End Date (DD-MM-YYYY)",
+                            key="data_window_end",
+                            placeholder="e.g., 31-12-2023",
+                            value=st.session_state.get("data_window_end", "") # Persist value
+                        )
+                        # Clear lookback value if switching to window
+                        st.session_state.data_lookback_days = 0
+                else:
+                     # Clear filter values if not applicable
+                     st.session_state.data_filter_mode = "Lookback"
+                     st.session_state.data_lookback_days = 0
+                     st.session_state.data_window_start = ""
+                     st.session_state.data_window_end = ""
 
-                index_col_selection = st.selectbox(
-                    "Select Index Column (datetime)",
-                    options=current_col_options,
-                    index=default_idx,
-                    key="data_index_col"
-                )
-            else:
-                # Ensure index_col is None if not applicable
-                if "data_index_col" in st.session_state:
-                    st.session_state.data_index_col = "<None>"
 
+                # --- 5. Resample (Conditional) ---
+                if plot_type_display in RESAMPLING_PLOT_TYPES:
+                    st.markdown("##### Resample (Time Series Charts)")
+                    resample_freq_selection = st.selectbox(
+                        "Resample Frequency",
+                        options=["<None>", "D", "W", "ME", "QE", "YE"], # Use pandas offset aliases
+                        index=0, # Default to <None>
+                        key="data_resample_freq",
+                        help="Resample the data to a lower frequency. '<None>' uses original frequency. Aggregation is always 'sum'.",
+                    )
+                else:
+                    # Clear resample value if not applicable
+                    st.session_state.data_resample_freq = "<None>"
 
-            # --- 4. Filter (Lookback/Window) (Conditional) ---
-            if plot_type_display in FILTERING_PLOT_TYPES:
-                st.markdown("##### Filter Data (Time Series)")
-                filter_mode = st.radio(
-                    "Filter by:",
-                    ["Lookback", "Date Window"],
-                    key="data_filter_mode",
-                    horizontal=True,
-                    index=0 # Default to Lookback
-                )
-
-                if filter_mode == "Lookback":
-                    st.number_input(
-                        "Lookback Period (days, 0=all)",
+                # --- 6. Smooth (Conditional) ---
+                if plot_type_display in SMOOTHING_PLOT_TYPES:
+                    st.markdown("##### Smooth (Time Series Charts)")
+                    smoothing_window_val = st.number_input(
+                        "Smoothing Window (days, 0=none)",
                         min_value=0,
                         step=1,
-                        value=st.session_state.get("data_lookback_days", 0), # Persist value
-                        key="data_lookback_days",
-                        help="Number of days of data to show, counting back from the latest date. 0 uses all available data.",
+                        value=st.session_state.get("data_smoothing_window", 0), # Persist value
+                        key="data_smoothing_window",
+                        help="Size of the trailing moving average window. 0 or 1 disables smoothing.",
                     )
-                    # Clear window values if switching to lookback
-                    st.session_state.data_window_start = ""
-                    st.session_state.data_window_end = ""
-                else: # Date Window
-                    st.text_input(
-                        "Start Date (DD-MM-YYYY)",
-                        key="data_window_start",
-                        placeholder="e.g., 01-01-2023",
-                        value=st.session_state.get("data_window_start", "") # Persist value
-                    )
-                    st.text_input(
-                        "End Date (DD-MM-YYYY)",
-                        key="data_window_end",
-                        placeholder="e.g., 31-12-2023",
-                        value=st.session_state.get("data_window_end", "") # Persist value
-                    )
-                    # Clear lookback value if switching to window
-                    st.session_state.data_lookback_days = 0
-            else:
-                 # Clear filter values if not applicable
-                 st.session_state.data_filter_mode = "Lookback"
-                 st.session_state.data_lookback_days = 0
-                 st.session_state.data_window_start = ""
-                 st.session_state.data_window_end = ""
-
-
-            # --- 5. Resample (Conditional) ---
-            if plot_type_display in RESAMPLING_PLOT_TYPES:
-                st.markdown("##### Resample (Time Series Charts)")
-                resample_freq_selection = st.selectbox(
-                    "Resample Frequency",
-                    options=["<None>", "D", "W", "ME", "QE", "YE"], # Use pandas offset aliases
-                    index=0, # Default to <None>
-                    key="data_resample_freq",
-                    help="Resample the data to a lower frequency. '<None>' uses original frequency. Aggregation is always 'sum'.",
-                )
-            else:
-                # Clear resample value if not applicable
-                st.session_state.data_resample_freq = "<None>"
-
-            # --- 6. Smooth (Conditional) ---
-            if plot_type_display in SMOOTHING_PLOT_TYPES:
-                st.markdown("##### Smooth (Time Series Charts)")
-                smoothing_window_val = st.number_input(
-                    "Smoothing Window (days, 0=none)",
-                    min_value=0,
-                    step=1,
-                    value=st.session_state.get("data_smoothing_window", 0), # Persist value
-                    key="data_smoothing_window",
-                    help="Size of the trailing moving average window. 0 or 1 disables smoothing.",
-                )
-            else:
-                # Clear smoothing value if not applicable
-                st.session_state.data_smoothing_window = 0
-
-            # --- Add specific column mappings if needed (e.g., Horizontal Bar) ---
-            column_mappings = {} # Initialize empty dict
-            if plot_type_display in COLUMN_MAPPING_PLOTS:
-                st.markdown("##### Column Roles")
-                mappings_needed = COLUMN_MAPPING_PLOTS[plot_type_display]
-                # Filter options based on columns NOT dropped or renamed
-                current_cols_for_mapping = [c for c in original_cols if c not in cols_to_drop]
-                # Apply renames to the list used for selection display/value
-                current_cols_for_mapping = [st.session_state.data_rename_map.get(c, c) for c in current_cols_for_mapping]
-
-                if not current_cols_for_mapping:
-                     st.warning("No columns available after dropping/renaming.")
                 else:
-                    for key, label in mappings_needed.items():
-                        # Find the default index for the selectbox
-                        current_selection = st.selectbox(
-                            label,
-                            options=current_cols_for_mapping,
-                            key=f"map_{key}_{plot_type_display}",
-                        )
-                        # Store the selection; build_plot will use this key directly
-                        column_mappings[key] = current_selection # Store the potentially renamed column name
-            st.session_state.data_column_mappings = column_mappings # Store mappings
+                    # Clear smoothing value if not applicable
+                    st.session_state.data_smoothing_window = 0
+
+                # --- Add specific column mappings if needed (e.g., Horizontal Bar) ---
+                column_mappings = {} # Initialize empty dict
+                if plot_type_display in COLUMN_MAPPING_PLOTS:
+                    st.markdown("##### Column Roles")
+                    mappings_needed = COLUMN_MAPPING_PLOTS[plot_type_display]
+                    # Filter options based on columns NOT dropped or renamed
+                    current_cols_for_mapping = [c for c in original_cols if c not in cols_to_drop]
+                    # Apply renames to the list used for selection display/value
+                    current_cols_for_mapping = [st.session_state.data_rename_map.get(c, c) for c in current_cols_for_mapping]
+
+                    if not current_cols_for_mapping:
+                         st.warning("No columns available after dropping/renaming.")
+                    else:
+                        for key, label in mappings_needed.items():
+                            # Find the default index for the selectbox
+                            current_selection = st.selectbox(
+                                label,
+                                options=current_cols_for_mapping,
+                                key=f"map_{key}_{plot_type_display}",
+                            )
+                            # Store the selection; build_plot will use this key directly
+                            column_mappings[key] = current_selection # Store the potentially renamed column name
+                st.session_state.data_column_mappings = column_mappings # Store mappings
+            else:
+                # Explicitly clear/reset states not used by Bar Chart
+                st.session_state.data_index_col = "<None>"
+                st.session_state.data_filter_mode = "Lookback"
+                st.session_state.data_lookback_days = 0
+                st.session_state.data_window_start = ""
+                st.session_state.data_window_end = ""
+                st.session_state.data_resample_freq = "<None>"
+                st.session_state.data_smoothing_window = 0
+                st.session_state.data_column_mappings = {}
 
     # --- Styling Column ---
     with col_styling:
@@ -422,149 +432,138 @@ if df is not None and plotter is not None:
             st.warning("Please upload data first.")
         else:
             try:
-                # --- Start with the original data ---
-                processed_df = st.session_state.df.copy()
+                processed_df = st.session_state.df.copy() # Start with a fresh copy
 
-                # --- Apply Transformations Sequentially ---
-
-                # 1. Drop Columns
+                # --- 1. Get selections from state ---
+                selected_original_index = st.session_state.get("data_index_col", "<None>")
                 cols_to_drop = st.session_state.get("data_cols_to_drop", [])
+                rename_map = st.session_state.get("data_rename_map", {})
+                column_mappings = st.session_state.get("data_column_mappings", {})
+                filter_mode = st.session_state.get("data_filter_mode", "Lookback")
+                lookback_days = st.session_state.get("data_lookback_days", 0)
+                start_date_str = st.session_state.get("data_window_start", "")
+                end_date_str = st.session_state.get("data_window_end", "")
+                resample_freq = st.session_state.get("data_resample_freq", "<None>")
+                smoothing_window = st.session_state.get("data_smoothing_window", 0)
+
+                # --- 2. Apply dropping ---
                 if cols_to_drop:
                     processed_df = processed_df.drop(columns=cols_to_drop, errors='ignore')
                     st.info(f"Dropped columns: {', '.join(cols_to_drop)}")
 
-                # 2. Rename Columns
-                rename_map = st.session_state.get("data_rename_map", {})
-                # Filter rename_map to only include columns that still exist
+                # --- 3. Apply renaming ---
                 actual_rename_map = {k: v for k, v in rename_map.items() if k in processed_df.columns}
                 if actual_rename_map:
                     processed_df = processed_df.rename(columns=actual_rename_map)
                     st.info(f"Renamed columns: {actual_rename_map}")
 
-                # Get column mappings *after* potential renames
-                column_mappings = st.session_state.get("data_column_mappings", {})
+                # --- 4. Determine and Validate Index Column (if needed) ---
+                index_col_current_name = "<None>"
+                if plot_type_display in INDEX_REQUIRED_PLOTS:
+                    if selected_original_index != "<None>":
+                        index_col_current_name = actual_rename_map.get(selected_original_index, selected_original_index)
+                        if index_col_current_name not in processed_df.columns:
+                            st.error(f"Selected index column '{selected_original_index}' (now '{index_col_current_name}') is not available after dropping/renaming.")
+                            st.stop()
+                    else:
+                        st.error(f"Plot type '{plot_type_display}' requires an index column to be selected in Data Settings.")
+                        st.stop()
 
-                # 3. Set Index
-                index_col = st.session_state.get("data_index_col", "<None>")
-                if index_col != "<None>" and index_col in processed_df.columns:
-                    try:
-                        processed_df[index_col] = pd.to_datetime(processed_df[index_col], errors='coerce')
-                        # Check for NaTs after conversion
-                        if processed_df[index_col].isnull().any():
-                            st.warning(f"Some values in index column '{index_col}' could not be converted to dates and were set to NaT. Rows with NaT indices will be dropped.")
-                        processed_df = processed_df.dropna(subset=[index_col]).set_index(index_col).sort_index()
-                        st.info(f"Set index to '{index_col}' and sorted.")
-                    except Exception as e:
-                        st.error(f"Failed to set index to '{index_col}': {e}")
-                        st.stop() # Stop execution if index fails
-                elif index_col != "<None>" and index_col not in processed_df.columns:
-                     st.error(f"Selected index column '{index_col}' not found in the data after dropping/renaming.")
-                     st.stop()
+                # --- 5. Prepare data_for_plot (set index or handle bar chart) ---
+                data_for_plot = None
 
+                if plot_type_display == "Bar Chart":
+                    st.info("Processing for Bar Chart: Using column names as categories and first row values.")
+                    numeric_df = processed_df.select_dtypes(include=np.number)
+                    if numeric_df.empty or len(numeric_df) == 0:
+                        st.error("No numeric columns or data rows found for Bar Chart.")
+                        st.stop()
+                    first_row_series = numeric_df.iloc[0].copy()
+                    first_row_series.index = first_row_series.index.astype(str)
+                    data_for_plot = first_row_series
 
-                # 4. Filter (Lookback/Window) - Only if index is DatetimeIndex
-                if isinstance(processed_df.index, pd.DatetimeIndex) and not processed_df.empty:
-                    filter_mode = st.session_state.get("data_filter_mode", "Lookback")
-                    lookback_days = st.session_state.get("data_lookback_days", 0)
-                    window_start_str = st.session_state.get("data_window_start", "")
-                    window_end_str = st.session_state.get("data_window_end", "")
-
-                    if filter_mode == "Lookback" and lookback_days > 0:
-                        latest_date = processed_df.index.max()
-                        start_date = latest_date - pd.Timedelta(days=lookback_days)
-                        processed_df = processed_df.loc[start_date:]
-                        st.info(f"Applied lookback: Showing data from {start_date.strftime('%Y-%m-%d')} to {latest_date.strftime('%Y-%m-%d')}.")
-                    elif filter_mode == "Date Window" and window_start_str and window_end_str:
+                elif plot_type_display in INDEX_REQUIRED_PLOTS:
+                    if index_col_current_name != "<None>":
                         try:
-                            # Use dayfirst=True because format is DD-MM-YYYY
-                            start_date = pd.to_datetime(window_start_str, dayfirst=True, errors='raise')
-                            end_date = pd.to_datetime(window_end_str, dayfirst=True, errors='raise')
-                            if start_date > end_date:
-                                 st.error("Filter Error: Start date cannot be after end date.")
-                            else:
-                                 processed_df = processed_df.loc[start_date:end_date]
-                                 st.info(f"Applied date window: Showing data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}.")
-                        except ValueError:
-                            st.error("Invalid Date Format: Please use DD-MM-YYYY for window dates.")
+                            processed_df[index_col_current_name] = pd.to_datetime(processed_df[index_col_current_name], errors='coerce')
+                            if processed_df[index_col_current_name].isnull().any():
+                                st.warning(f"Some values in index column '{index_col_current_name}' could not be converted to dates (set to NaT). Dropping these rows.")
+                            processed_df = processed_df.dropna(subset=[index_col_current_name]).set_index(index_col_current_name).sort_index()
+                            st.info(f"Set index to '{index_col_current_name}' and sorted.")
+                            data_for_plot = processed_df
                         except Exception as e:
-                            st.error(f"Error applying date window: {e}")
-                    # else: No filter applied or invalid input
+                            st.error(f"Failed to set index to '{index_col_current_name}': {e}")
+                            st.stop()
+                else:
+                    data_for_plot = processed_df
 
-                # 5. Resample - Only if index is DatetimeIndex
-                resample_freq = st.session_state.get("data_resample_freq", "<None>")
-                if resample_freq != "<None>" and isinstance(processed_df.index, pd.DatetimeIndex) and not processed_df.empty:
-                     try:
-                         # Resample only numeric columns using sum
-                         numeric_cols = processed_df.select_dtypes(include=np.number).columns
-                         if not numeric_cols.empty:
-                             resampled_numeric = processed_df[numeric_cols].resample(resample_freq).sum()
-                             # Keep non-numeric columns by taking the 'first' value in the period (optional, could drop)
-                             non_numeric_cols = processed_df.select_dtypes(exclude=np.number).columns
-                             if not non_numeric_cols.empty:
-                                 resampled_non_numeric = processed_df[non_numeric_cols].resample(resample_freq).first()
-                                 processed_df = pd.concat([resampled_numeric, resampled_non_numeric], axis=1)
-                             else:
-                                 processed_df = resampled_numeric
-                             st.info(f"Resampled data to frequency '{resample_freq}' using 'sum'.")
-                         else:
-                             st.warning("No numeric columns found to resample.")
-                     except Exception as e:
-                         st.warning(f"Could not resample data: {e}")
+                # --- 6. Apply Filtering, Resampling, Smoothing (to data_for_plot if DataFrame) ---
+                if isinstance(data_for_plot, pd.DataFrame) and not data_for_plot.empty:
+                    if isinstance(data_for_plot.index, pd.DatetimeIndex):
+                        if filter_mode == "Lookback" and lookback_days > 0:
+                            end_date_filter = data_for_plot.index.max()
+                            start_date_filter = end_date_filter - pd.Timedelta(days=lookback_days - 1)
+                            data_for_plot = data_for_plot.loc[start_date_filter:end_date_filter]
+                            st.info(f"Applied {lookback_days}-day lookback filter.")
+                        elif filter_mode == "Date Window":
+                            try:
+                                start_f = pd.to_datetime(start_date_str, dayfirst=True, errors='coerce') if start_date_str else None
+                                end_f = pd.to_datetime(end_date_str, dayfirst=True, errors='coerce') if end_date_str else None
+                                if start_f or end_f:
+                                    data_for_plot = data_for_plot.loc[start_f:end_f]
+                                    st.info(f"Applied date window filter: {start_f} to {end_f}.")
+                                elif start_date_str or end_date_str:
+                                    st.warning("Invalid date format for filtering (use DD-MM-YYYY). Filter not applied.")
+                            except Exception as e:
+                                st.error(f"Error applying date window filter: {e}")
+                    if resample_freq != "<None>" and isinstance(data_for_plot.index, pd.DatetimeIndex):
+                        try:
+                            numeric_cols = data_for_plot.select_dtypes(include='number').columns
+                            data_for_plot = data_for_plot[numeric_cols].resample(resample_freq).sum()
+                            st.info(f"Resampled data to '{resample_freq}' frequency (sum).")
+                        except Exception as e:
+                            st.error(f"Failed to resample data: {e}")
+                    if smoothing_window > 1:
+                        try:
+                            numeric_cols = data_for_plot.select_dtypes(include='number').columns
+                            data_for_plot[numeric_cols] = data_for_plot[numeric_cols].rolling(window=smoothing_window, min_periods=1).mean()
+                            st.info(f"Applied {smoothing_window}-period rolling average.")
+                        except Exception as e:
+                            st.error(f"Failed to apply smoothing: {e}")
 
-                # 6. Smooth - Only apply to numeric columns
-                smoothing_window = st.session_state.get("data_smoothing_window", 0)
-                if smoothing_window > 1 and not processed_df.empty:
-                    try:
-                        numeric_cols = processed_df.select_dtypes(include=np.number).columns
-                        if not numeric_cols.empty:
-                            # Apply TRAILING moving average
-                            processed_df[numeric_cols] = processed_df[numeric_cols].rolling(
-                                window=smoothing_window,
-                                min_periods=1 # Calculate even if window not full at start
-                            ).mean()
-                            st.info(f"Applied {smoothing_window}-day trailing moving average smoothing.")
-                        else:
-                            st.warning("No numeric columns found to apply smoothing.")
-                    except Exception as e:
-                        st.warning(f"Could not apply smoothing: {e}")
+                # --- 7. Final Check and Plotting ---
+                if data_for_plot is None or data_for_plot.empty:
+                    is_empty = data_for_plot.empty if hasattr(data_for_plot, 'empty') else True
+                    if is_empty:
+                        st.error("No valid data available to generate the plot after processing.")
+                        st.stop()
 
-                # --- Final Check for Empty Data ---
-                if processed_df.empty:
-                     st.warning("No data remaining after applying transformations.")
-                     st.stop()
+                st.markdown("---")
+                plot_title = st.session_state.get("plot_title", "My Data Display")
+                plot_subtitle = st.session_state.get("plot_subtitle", "")
+                plot_source = st.session_state.get("plot_source", "")
+                y_prefix = st.session_state.get("y_prefix", "")
+                y_suffix = st.session_state.get("y_suffix", "")
 
-                # --- Conditional Rendering ---
-                st.markdown("---") # Separator before output
                 st.markdown(f"### {plot_title}")
                 if plot_subtitle:
                     st.markdown(f"*{plot_subtitle}*")
 
-                # --- Conditional Rendering based on plot type ---
                 is_plotly_chart = plot_type_display != "Table (AG-Grid)"
                 is_aggrid_table = plot_type_display == "Table (AG-Grid)"
 
                 if is_aggrid_table:
-                    # --- Render AG-Grid Table ---
+                    if not isinstance(data_for_plot, pd.DataFrame):
+                        st.error("AG-Grid table requires DataFrame input.")
+                        st.stop()
                     with st.spinner("Generating table..."):
-                        # Prepare AG-Grid specific overrides if any
-                        aggrid_params_override = {
-                            "height": st.session_state.get("aggrid_height", 500)
-                        }
-                        # Add more overrides here based on UI elements if needed
-
-                        # Render the grid
                         render_aggrid_table(
-                            df=processed_df,
-                            aggrid_params_override=aggrid_params_override
-                            # Pass other overrides if implemented
+                            df=data_for_plot,
+                            title=plot_title,
+                            subtitle=plot_subtitle,
+                            source=plot_source,
                         )
-
-                        # Add Source text below
-                        if plot_source:
-                            st.caption(f"Source: {plot_source}")
-
-                        # Add Download Button for CSV
-                        csv_bytes = dataframe_to_csv_bytes(processed_df)
+                        csv_bytes = dataframe_to_csv_bytes(data_for_plot)
                         st.download_button(
                             label="Download Table Data as CSV",
                             data=csv_bytes,
@@ -573,46 +572,56 @@ if df is not None and plotter is not None:
                         )
 
                 elif is_plotly_chart:
-                    # --- Render Plotly Chart ---
                     if plotter is None:
-                         st.error("Plotter instance not available. Cannot generate chart.")
-                         st.stop()
+                        st.error("Plotter instance not available.")
+                        st.stop()
+                    
+                    # --- BEGIN: CSS Injection for Fixed Size Plot ---
+                    # Inject CSS to make the container scrollable
+                    st.markdown(f"""
+                    <style>
+                    /* Target the specific div Streamlit uses for Plotly charts */
+                    div[data-testid="stPlotlyChart"] {{
+                        /* Allow the container to scroll vertically and horizontally */
+                        /* if the content (the fixed-size plot) overflows */
+                        overflow: auto;
 
+                        /* Optional: Define a max-height/width for the container if needed, */
+                        /* but overflow: auto is the primary mechanism. */
+                        /* max-width: 100%; */
+                        /* max-height: 80vh; */ /* Example: limit height to 80% of viewport */
+                    }}
+                    </style>
+                    """, unsafe_allow_html=True)
+                    # --- END: CSS Injection ---
+                    
                     with st.spinner("Generating plot..."):
                         fig = build_plot(
-                            df=processed_df,
+                            df=data_for_plot,
                             plotter=plotter,
                             plot_type_display=plot_type_display,
                             column_mappings=column_mappings,
-                            title=plot_title, # Title/subtitle handled by build_plot layout
+                            title=plot_title,
                             subtitle=plot_subtitle,
                             source=plot_source,
                             prefix=y_prefix,
                             suffix=y_suffix,
                         )
-
                         if fig:
-                            try:
-                                # Display Plotly chart
-                                st.plotly_chart(fig, use_container_width=False) #ALWAYS KEEP AS FALSE
-
-                                # Add Download Button for HTML
-                                html_string = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})
-                                st.download_button(
-                                    label="Download Plot as HTML",
-                                    data=html_string.encode('utf-8'),
-                                    file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
-                                    mime="text/html",
-                                )
-                            except Exception as e:
-                                st.error(f"Could not render or prepare plot HTML: {e}")
-                                traceback.print_exc()
+                            st.plotly_chart(fig, use_container_width=False)
+                            html_string = fig.to_html(include_plotlyjs='cdn', full_html=True, config={'displayModeBar': True})
+                            st.download_button(
+                                label="Download Plot as HTML",
+                                data=html_string.encode('utf-8'),
+                                file_name=f"{plot_title.lower().replace(' ', '_')}_plot.html",
+                                mime="text/html",
+                            )
                         else:
-                            st.warning("Plot generation did not produce a figure. Check data and settings.")
+                            st.warning("Plot generation did not produce a figure.")
 
             except Exception as e:
-                st.error("An error occurred during data processing or plot generation.")
-                st.exception(e) # Show full traceback in the app
+                st.error("An unexpected error occurred during processing or plot generation.")
+                st.exception(e) # Show detailed traceback in the app
 
 else:
     st.info("⬅ Upload a file to get started!")
