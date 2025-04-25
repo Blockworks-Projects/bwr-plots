@@ -35,14 +35,19 @@ def _add_metric_share_area_traces(
         print("Warning: No numeric columns found in data for metric share area plot.")
         return
 
-    # Sort columns by their average value (largest first)
-    # This improves the visual appearance of a stacked area chart
-    col_means = (
-        data[numeric_cols].mean().sort_values(ascending=True)
-    )  # Smallest to largest
-    sorted_cols = col_means.index.tolist()
-    print(f"Sorted columns by mean (smallest to largest): {sorted_cols}")
-    print(f"Column means: {col_means.to_dict()}")
+    # --- Sort columns based on the value in the *last* row (most recent data point) ---
+    # Assumption: The input DataFrame 'data' is sorted chronologically by index.
+    if not data.empty:
+        last_row_values = data[numeric_cols].iloc[-1]  # Get the last row's values
+        sorted_last_row = last_row_values.sort_values(ascending=False)  # Sort them descending
+        sorted_cols = sorted_last_row.index.tolist()  # Get column names in sorted order
+        print(f"Sorted columns by last value (largest to smallest): {sorted_cols}")  # Updated print
+        print(f"Last row values used for sorting: {last_row_values.to_dict()}")  # Updated print
+    else:
+        # Handle empty dataframe case if it somehow bypassed the initial check
+        sorted_cols = numeric_cols.tolist()
+        print("Warning: Data is empty, using original column order for colors.")
+    # --- End of new sorting logic ---
 
     # Get colors from palette for each column
     colors = {}
