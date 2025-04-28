@@ -1,7 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-# Debugging rules
-- When asked to debug, use TRY-EXCEPT blocks with informative error messages, including colored printing (using termcolor in Python and chalk in TypeScript)
