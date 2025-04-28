@@ -45,7 +45,7 @@ df_monthly = df[numeric_cols].resample("MS").sum()
 df_monthly_plot = df_monthly["2023-01-01":]
 
 # Format index for better display
-df_monthly_plot.index = df_monthly_plot.index.strftime("%Y-%m")
+# df_monthly_plot.index = df_monthly_plot.index.strftime("%Y-%m") # <-- Commented out for correct date axis
 
 
 # --- Check for environment variable to open browser ---

@@ -16,6 +16,7 @@ import math
 from termcolor import colored
 import json
 import traceback
+import mimetypes
 
 # --- Relative Imports ---
 from .config import DEFAULT_BWR_CONFIG
@@ -266,19 +267,24 @@ class BWRPlots:
         self.watermark = None
         self._load_watermark()
 
-        # --- ADD THESE LINES ---
-        # Load SVG background based on final config
-        self.svg_background_data = None
-        self._load_svg_background()
-        # --------------------
+        # Load background image based on final config
+        self.background_image_data = None
+        self._load_background_image()
 
         # --- ADD THESE LINES ---
-        print(f"[DEBUG] BWRPlots Init: Final config 'general.svg_background_path': {self.config.get('general', {}).get('svg_background_path')}")
-        # Print the use_svg_background flag for a few key plot types to check config merge
-        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.scatter.use_svg_background': {self.config.get('plot_specific', {}).get('scatter', {}).get('use_svg_background')}")
-        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.bar.use_svg_background': {self.config.get('plot_specific', {}).get('bar', {}).get('use_svg_background')}")
-        print(f"[DEBUG] BWRPlots Init: Final config 'plot_specific.multi_bar.use_svg_background': {self.config.get('plot_specific', {}).get('multi_bar', {}).get('use_svg_background')}")
-        print(f"[DEBUG] BWRPlots Init: Calling _load_svg_background...")
+        print(
+            f"[DEBUG] BWRPlots Init: Final config 'general.background_image_path': {self.config.get('general', {}).get('background_image_path')}"
+        )
+        # Print the use_background_image flag for a few key plot types to check config merge
+        print(
+            f"[DEBUG] BWRPlots Init: Final config 'plot_specific.scatter.use_background_image': {self.config.get('plot_specific', {}).get('scatter', {}).get('use_background_image')}"
+        )
+        print(
+            f"[DEBUG] BWRPlots Init: Final config 'plot_specific.bar.use_background_image': {self.config.get('plot_specific', {}).get('bar', {}).get('use_background_image')}"
+        )
+        print(
+            f"[DEBUG] BWRPlots Init: Final config 'plot_specific.multi_bar.use_background_image': {self.config.get('plot_specific', {}).get('multi_bar', {}).get('use_background_image')}"
+        )
         # --------------------
 
     def _load_watermark(self) -> None:
@@ -328,47 +334,78 @@ class BWRPlots:
             )
             self.watermark = None
 
-    # --- ADD THIS NEW METHOD ---
-    def _load_svg_background(self) -> None:
-        """Loads the SVG background specified in the config."""
-        svg_rel_path = self.config["general"].get("svg_background_path", "")
-        print(f"[DEBUG] SVG Background: Relative path from config: '{svg_rel_path}'") # VERIFY/ADD
+    def _load_background_image(self) -> None:
+        """Loads the background image specified in the config."""
+        # Use the RENAMED config key
+        img_rel_path = self.config["general"].get("background_image_path", "")
+        print(f"[DEBUG] Load BG Image: Relative path from config: '{img_rel_path}'")
 
-        if not svg_rel_path:
-            print("Warning: No svg_background_path specified in config['general']. SVG background disabled.")
-            self.svg_background_data = None
+        if not img_rel_path:
+            print(
+                "Info: No background_image_path specified in config['general']. Background image disabled."
+            )
+            self.background_image_data = None
             return
 
         try:
-            # Resolve project root relative to this file (core.py is in src/bwr_plots/)
             project_root = Path(__file__).resolve().parent.parent.parent
-            svg_abs_path = project_root / svg_rel_path
-            print(f"[DEBUG] SVG Background: Calculated absolute path: '{svg_abs_path}'") # VERIFY/ADD
+            img_abs_path = project_root / img_rel_path
+            print(f"[DEBUG] Load BG Image: Calculated absolute path: '{img_abs_path}'")
 
-            if svg_abs_path.exists():
-                print(f"[DEBUG] SVG Background: File exists at calculated path.") # VERIFY/ADD
-                with open(svg_abs_path, "r", encoding="utf-8") as file:
-                    svg_content = file.read()
-                self.svg_background_data = "data:image/svg+xml;base64," + base64.b64encode(
-                    svg_content.encode("utf-8")
-                ).decode("utf-8")
-                print(f"[INFO] Successfully loaded SVG background from: {svg_abs_path}")
-                print(f"[DEBUG] SVG Background: self.svg_background_data is now set (length: {len(self.svg_background_data)}).") # VERIFY/ADD
+            if img_abs_path.exists() and img_abs_path.is_file():
+                print(f"[DEBUG] Load BG Image: File exists at '{img_abs_path}'.")
+
+                # Determine MIME type
+                mime_type, _ = mimetypes.guess_type(img_abs_path)
+                if not mime_type or not mime_type.startswith("image/"):
+                    print(
+                        f"Warning: Could not determine valid image MIME type for {img_abs_path}. Guessed: {mime_type}. Skipping background."
+                    )
+                    self.background_image_data = None
+                    return
+                print(f"[DEBUG] Load BG Image: Determined MIME type: {mime_type}")
+
+                # Read file as binary
+                with open(img_abs_path, "rb") as image_file:
+                    image_bytes = image_file.read()
+
+                # Encode bytes as Base64
+                base64_encoded_bytes = base64.b64encode(image_bytes)
+                base64_string = base64_encoded_bytes.decode("utf-8")
+
+                # Construct the data URI
+                self.background_image_data = f"data:{mime_type};base64,{base64_string}"
+                print(
+                    f"[INFO] Successfully loaded background image from: {img_abs_path}"
+                )
+                print(
+                    f"[DEBUG] Load BG Image: self.background_image_data is set (URI starts with: {self.background_image_data[:50]}...)."
+                )
+
             else:
-                print(f"[DEBUG] SVG Background: File DOES NOT exist at calculated path.") # VERIFY/ADD <--- Important Check
-                print(f"Warning: SVG background file not found at resolved path: {svg_abs_path}")
-                self.svg_background_data = None
+                print(
+                    f"[DEBUG] Load BG Image: File DOES NOT exist or is not a file at '{img_abs_path}'."
+                )
+                print(
+                    f"Warning: Background image file not found at resolved path: {img_abs_path}"
+                )
+                self.background_image_data = None
 
         except FileNotFoundError:
-            print(f"[DEBUG] SVG Background: FileNotFoundError for path: {svg_abs_path}") # DEBUG
-            print(f"Warning: SVG background file specified but not found at path: {svg_abs_path}")
-            self.svg_background_data = None
+            print(f"[DEBUG] Load BG Image: FileNotFoundError for path: {img_abs_path}")
+            print(
+                f"Warning: Background image file specified but not found at path: {img_abs_path}"
+            )
+            self.background_image_data = None
         except Exception as e:
-            print(f"[DEBUG] SVG Background: Exception during SVG load: {type(e).__name__}") # DEBUG
-            print(f"Warning: Failed to load SVG background from {svg_rel_path} (resolved: {svg_abs_path}): {e}")
-            traceback.print_exc() # Print detailed error
-            self.svg_background_data = None
-    # --------------------------
+            print(
+                f"[DEBUG] Load BG Image: Exception during image load: {type(e).__name__}"
+            )
+            print(
+                f"Warning: Failed to load background image from {img_rel_path} (resolved: {img_abs_path}): {e}"
+            )
+            traceback.print_exc()
+            self.background_image_data = None
 
     def _get_font_dict(self, font_type: str) -> Dict[str, Any]:
         """
@@ -410,7 +447,9 @@ class BWRPlots:
         else:
             return data
 
-    def _prepare_xaxis_data(self, data: Union[pd.DataFrame, pd.Series], xaxis_is_date: bool) -> Union[pd.DataFrame, pd.Series]:
+    def _prepare_xaxis_data(
+        self, data: Union[pd.DataFrame, pd.Series], xaxis_is_date: bool
+    ) -> Union[pd.DataFrame, pd.Series]:
         """
         Ensures the index is appropriate for the x-axis type for plotting traces.
         If xaxis_is_date is False and the index is numeric, converts it to string
@@ -418,14 +457,20 @@ class BWRPlots:
         If xaxis_is_date is True, ensures the index is datetime.
         """
         if data is None or data.empty:
-            print("[DEBUG _prepare_xaxis_data] Received None or empty data, returning as is.")
+            print(
+                "[DEBUG _prepare_xaxis_data] Received None or empty data, returning as is."
+            )
             return data
 
-        print(f"[DEBUG _prepare_xaxis_data] Processing data with index type: {data.index.dtype}, xaxis_is_date: {xaxis_is_date}")
+        print(
+            f"[DEBUG _prepare_xaxis_data] Processing data with index type: {data.index.dtype}, xaxis_is_date: {xaxis_is_date}"
+        )
 
         if xaxis_is_date:
             # If it's supposed to be a date, ensure it is (using existing logic)
-            print("[DEBUG _prepare_xaxis_data] xaxis_is_date is True, ensuring datetime index.")
+            print(
+                "[DEBUG _prepare_xaxis_data] xaxis_is_date is True, ensuring datetime index."
+            )
             return self._ensure_datetime_index(data, xaxis_is_date=True)
         else:
             # If it's NOT a date, check if the index is numeric.
@@ -435,17 +480,27 @@ class BWRPlots:
                     # Work on a copy to avoid modifying original data unexpectedly elsewhere
                     data_copy = data.copy()
                     data_copy.index = data_copy.index.astype(str)
-                    print(f"[DEBUG _prepare_xaxis_data] Converted numeric index (dtype: {data.index.dtype}) to string because xaxis_is_date is False.")
-                    print(f"[DEBUG _prepare_xaxis_data] Index type AFTER conversion: {data_copy.index.dtype}")
-                    print(f"[DEBUG _prepare_xaxis_data] First 5 index values AFTER conversion: {data_copy.index[:5].tolist()}")
+                    print(
+                        f"[DEBUG _prepare_xaxis_data] Converted numeric index (dtype: {data.index.dtype}) to string because xaxis_is_date is False."
+                    )
+                    print(
+                        f"[DEBUG _prepare_xaxis_data] Index type AFTER conversion: {data_copy.index.dtype}"
+                    )
+                    print(
+                        f"[DEBUG _prepare_xaxis_data] First 5 index values AFTER conversion: {data_copy.index[:5].tolist()}"
+                    )
                     return data_copy
                 except Exception as e:
-                    print(f"Warning: Failed to convert numeric index to string in _prepare_xaxis_data: {e}")
+                    print(
+                        f"Warning: Failed to convert numeric index to string in _prepare_xaxis_data: {e}"
+                    )
                     # Return original data if conversion fails
                     return data
             else:
                 # Index is already non-numeric (e.g., string, category, potentially already datetime), leave it as is.
-                print(f"[DEBUG _prepare_xaxis_data] Index is already non-numeric (dtype: {data.index.dtype}), returning as is for non-date axis.")
+                print(
+                    f"[DEBUG _prepare_xaxis_data] Index is already non-numeric (dtype: {data.index.dtype}), returning as is for non-date axis."
+                )
                 return data
 
     def _apply_common_layout(
@@ -505,8 +560,12 @@ class BWRPlots:
             annot_yanchor = cfg_annot["table_yanchor"]
         elif is_horizontal_legend:
             # Use config-driven default_source_x for horizontal legend as well
-            annot_x = source_x if source_x is not None else cfg_annot["default_source_x"]
-            annot_y = source_y if source_y is not None else cfg_annot["default_source_y"]
+            annot_x = (
+                source_x if source_x is not None else cfg_annot["default_source_x"]
+            )
+            annot_y = (
+                source_y if source_y is not None else cfg_annot["default_source_y"]
+            )
             annot_xanchor = cfg_annot["xanchor"]
             annot_yanchor = cfg_annot["yanchor"]
         else:
@@ -536,7 +595,9 @@ class BWRPlots:
 
         # Calculate a base bottom margin considering the minimum required by config
         # and the space needed for the annotation text, plus a small buffer.
-        bottom_margin_base = max(cfg_layout["margin_b_min"], int(annotation_space_below) + 20) # Base margin
+        bottom_margin_base = max(
+            cfg_layout["margin_b_min"], int(annotation_space_below) + 20
+        )  # Base margin
 
         # Define how much *extra* space the horizontal legend needs (in pixels)
         # This value might need tweaking based on font size and desired padding.
@@ -544,8 +605,8 @@ class BWRPlots:
 
         # Determine if we are actually showing a horizontal legend below the plot
         is_horizontal_legend_shown_below = (
-            show_legend                             # Is the legend globally enabled?
-            and cfg_legend["orientation"] == "h"    # Is its orientation horizontal?
+            show_legend  # Is the legend globally enabled?
+            and cfg_legend["orientation"] == "h"  # Is its orientation horizontal?
             # and legend_y < 0                      # Optionally: Is it positioned below y=0? (Typically true based on config)
         )
 
@@ -579,7 +640,9 @@ class BWRPlots:
         subtitle_font = cfg_fonts["subtitle"]
         # Default to the color defined in the fonts config for subtitle,
         # with a final hardcoded fallback just in case.
-        subtitle_color = subtitle_font.get("color", cfg_fonts["subtitle"].get("color", "#adb0b5"))
+        subtitle_color = subtitle_font.get(
+            "color", cfg_fonts["subtitle"].get("color", "#adb0b5")
+        )
         subtitle_size = subtitle_font.get("size", 15)
 
         fig.update_layout(
@@ -643,7 +706,7 @@ class BWRPlots:
         axis_options: Optional[Dict] = None,
         is_secondary: bool = False,
         axis_min_calculated: Optional[float] = None,
-        xaxis_is_date: bool = True
+        xaxis_is_date: bool = True,
     ) -> None:
         """
         Apply common X and Y axis styling to a figure.
@@ -674,17 +737,27 @@ class BWRPlots:
         if axis_options:
             merged_options.update(axis_options)
         # --- UPDATED LOGIC ---
-        xaxis_type = merged_options.get('x_type', 'linear')
-        if not xaxis_is_date and xaxis_type == 'date':
-            xaxis_type = 'category'
+        xaxis_type = merged_options.get("x_type", "linear")
+        if not xaxis_is_date and xaxis_type == "date":
+            xaxis_type = "category"
             try:
                 from termcolor import colored
-                print(colored(f"[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.", "yellow"))
+
+                print(
+                    colored(
+                        f"[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.",
+                        "yellow",
+                    )
+                )
             except ImportError:
-                print("[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.")
+                print(
+                    "[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'."
+                )
         # --- MODIFIED LOGIC ---
         if xaxis_is_date:
-            xaxis_tickformat = merged_options["x_tickformat"]  # Use configured date format
+            xaxis_tickformat = merged_options[
+                "x_tickformat"
+            ]  # Use configured date format
         else:
             xaxis_tickformat = ""  # Use empty string for default numeric formatting
         # --- End MODIFIED LOGIC ---
@@ -716,7 +789,7 @@ class BWRPlots:
             tickfont=self._get_font_dict("tick"),
             zeroline=False,
             zerolinewidth=0,
-            zerolinecolor='rgba(0,0,0,0)',
+            zerolinecolor="rgba(0,0,0,0)",
             showspikes=cfg_axes["showspikes"],
             spikethickness=cfg_axes["spikethickness"],
             spikedash=cfg_axes["spikedash"],
@@ -727,7 +800,7 @@ class BWRPlots:
             range=merged_options["x_range"],
             visible=True,
             color="rgba(0,0,0,0)",
-            anchor='free',
+            anchor="free",
             position=0,
             fixedrange=True,
             tickvals=merged_options.get("x_tickvals", None),
@@ -740,7 +813,7 @@ class BWRPlots:
         primary_tickmode = merged_options.get("primary_tickmode", "auto")
         # === START MODIFICATION ===
         if primary_dtick is not None:
-            primary_tickmode = 'linear'  # FORCE linear mode when dtick is set
+            primary_tickmode = "linear"  # FORCE linear mode when dtick is set
             # Check if dtick is fractional
             if isinstance(primary_dtick, (float, int)) and primary_dtick % 1 != 0:
                 # If fractional, ensure format supports decimals. Override common integer formats.
@@ -748,9 +821,17 @@ class BWRPlots:
                     adjusted_primary_tickformat = ",.2f"
                     try:
                         from termcolor import colored
-                        print(colored(f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'.", "yellow"))
+
+                        print(
+                            colored(
+                                f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'.",
+                                "yellow",
+                            )
+                        )
                     except ImportError:
-                        print(f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'.")
+                        print(
+                            f"[INFO] Fractional primary dtick ({primary_dtick}) detected. Overriding format '{primary_tickformat}' to '{adjusted_primary_tickformat}'."
+                        )
                     primary_tickformat = adjusted_primary_tickformat
         # === END MODIFICATION ===
         fig.update_yaxes(
@@ -775,7 +856,7 @@ class BWRPlots:
             linewidth=cfg_axes["linewidth"],
             zeroline=False,  # Disable the explicit Y-axis zero line
             zerolinewidth=0,  # Explicitly set width to 0 for clarity
-            zerolinecolor='rgba(0,0,0,0)',  # Explicitly set color to transparent for clarity
+            zerolinecolor="rgba(0,0,0,0)",  # Explicitly set color to transparent for clarity
             showticklabels=True,
             # === MODIFICATION: Apply tickmode, tick0, dtick ===
             tickmode=primary_tickmode,  # Apply potentially forced 'linear' mode
@@ -794,15 +875,26 @@ class BWRPlots:
             secondary_tickmode = merged_options.get("secondary_tickmode", "auto")
             # === START MODIFICATION (Secondary Axis) ===
             if secondary_dtick is not None:
-                secondary_tickmode = 'linear'  # FORCE linear mode
-                if isinstance(secondary_dtick, (float, int)) and secondary_dtick % 1 != 0:
+                secondary_tickmode = "linear"  # FORCE linear mode
+                if (
+                    isinstance(secondary_dtick, (float, int))
+                    and secondary_dtick % 1 != 0
+                ):
                     if secondary_tickformat in [",d", ",.0f", "d", ".0f"]:
                         adjusted_secondary_tickformat = ",.2f"
                         try:
                             from termcolor import colored
-                            print(colored(f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'.", "yellow"))
+
+                            print(
+                                colored(
+                                    f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'.",
+                                    "yellow",
+                                )
+                            )
                         except ImportError:
-                            print(f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'.")
+                            print(
+                                f"[INFO] Fractional secondary dtick ({secondary_dtick}) detected. Overriding format '{secondary_tickformat}' to '{adjusted_secondary_tickformat}'."
+                            )
                         secondary_tickformat = adjusted_secondary_tickformat
             # === END MODIFICATION (Secondary Axis) ===
             fig.update_yaxes(
@@ -970,9 +1062,15 @@ class BWRPlots:
             secondary_data_orig = pd.DataFrame(secondary_data_orig)
 
         # Attempt index conversion early
-        primary_data_orig = self._ensure_datetime_index(primary_data_orig, xaxis_is_date=xaxis_is_date)
+        primary_data_orig = self._ensure_datetime_index(
+            primary_data_orig, xaxis_is_date=xaxis_is_date
+        )
         secondary_data_orig = (
-            self._ensure_datetime_index(secondary_data_orig, xaxis_is_date=xaxis_is_date) if has_secondary else None
+            self._ensure_datetime_index(
+                secondary_data_orig, xaxis_is_date=xaxis_is_date
+            )
+            if has_secondary
+            else None
         )
 
         # --- Determine Effective Date ---
@@ -1068,9 +1166,7 @@ class BWRPlots:
 
             if y_values_for_range:
                 yaxis_params = calculate_yaxis_grid_params(
-                    y_data=y_values_for_range,
-                    padding=0.05,
-                    num_gridlines=5
+                    y_data=y_values_for_range, padding=0.05, num_gridlines=5
                 )
                 local_axis_options["primary_range"] = yaxis_params["range"]
                 local_axis_options["primary_tick0"] = yaxis_params["tick0"]
@@ -1123,32 +1219,49 @@ class BWRPlots:
             local_axis_options["x_range"] = [min_date, max_date]
 
         # --- Determine xaxis_type and add to axis options ---
-        effective_xaxis_type = 'linear'  # Default
+        effective_xaxis_type = "linear"  # Default
         data_source_for_index_check = scaled_primary_data
-        if data_source_for_index_check is not None and not data_source_for_index_check.empty:
+        if (
+            data_source_for_index_check is not None
+            and not data_source_for_index_check.empty
+        ):
             if xaxis_is_date:
-                effective_xaxis_type = 'date'
+                effective_xaxis_type = "date"
             else:
                 index_dtype = data_source_for_index_check.index.dtype
                 if pd.api.types.is_numeric_dtype(index_dtype):
-                    effective_xaxis_type = 'linear'
+                    effective_xaxis_type = "linear"
                 else:
-                    effective_xaxis_type = 'category'
-                    local_axis_options['x_tickformat'] = None
+                    effective_xaxis_type = "category"
+                    local_axis_options["x_tickformat"] = None
                     try:
                         from termcolor import colored
-                        print(colored(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}", "cyan"))
+
+                        print(
+                            colored(
+                                f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}",
+                                "cyan",
+                            )
+                        )
                     except ImportError:
-                        print(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}")
-        local_axis_options['x_type'] = effective_xaxis_type
+                        print(
+                            f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}"
+                        )
+        local_axis_options["x_type"] = effective_xaxis_type
 
         # --- >>> START INSERTION for scatter_plot <<< ---
         # Prepare index type based on xaxis_is_date flag BEFORE passing to trace function
         print("[DEBUG scatter_plot] Calling _prepare_xaxis_data for primary data...")
-        scaled_primary_data = self._prepare_xaxis_data(scaled_primary_data, xaxis_is_date)
+        scaled_primary_data = self._prepare_xaxis_data(
+            scaled_primary_data, xaxis_is_date
+        )
         if has_secondary:
-            print("[DEBUG scatter_plot] Calling _prepare_xaxis_data for secondary data...")
-            scaled_secondary_data = self._prepare_xaxis_data(scaled_secondary_data, xaxis_is_date)
+            print(
+                "[DEBUG scatter_plot] Calling _prepare_xaxis_data for secondary data..."
+            )
+            scaled_secondary_data = self._prepare_xaxis_data(
+                scaled_secondary_data, xaxis_is_date
+            )
         # --- >>> END INSERTION for scatter_plot <<< ---
 
         # --- Call the Chart Function ---
@@ -1182,15 +1295,23 @@ class BWRPlots:
             local_axis_options,
             is_secondary=has_secondary,
             axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=xaxis_is_date
+            xaxis_is_date=xaxis_is_date,
         )
 
         # --- ADD THIS CALL ---
-        plot_type_key = 'scatter' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
+        plot_type_key = "scatter"  # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = (
+            self.config.get("plot_specific", {})
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_background_image' flag: {use_svg_flag_for_plot}"
+        )  # DEBUG
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_background_image..."
+        )  # DEBUG
+        self._apply_background_image(fig, plot_type_key)
         # --------------------
 
         # --- Add Watermark ---
@@ -1344,12 +1465,14 @@ class BWRPlots:
         axis_min_calculated = None
         yaxis_params = None
         if not normalized_data.empty:
-            y_values_for_range = normalized_data.select_dtypes(include=np.number).values.flatten()
+            y_values_for_range = normalized_data.select_dtypes(
+                include=np.number
+            ).values.flatten()
             if y_values_for_range.size > 0:
                 yaxis_params = calculate_yaxis_grid_params(
                     y_data=y_values_for_range,
                     padding=0.0,  # No extra padding for share plots
-                    num_gridlines=5
+                    num_gridlines=5,
                 )
                 axis_min_calculated = yaxis_params["tick0"]
                 # --- Add yaxis_params to local_axis_options ---
@@ -1359,38 +1482,51 @@ class BWRPlots:
                 local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
 
         # --- Ensure first and last x-tick are always shown ---
-        if not normalized_data.empty and isinstance(normalized_data.index, pd.DatetimeIndex):
+        if not normalized_data.empty and isinstance(
+            normalized_data.index, pd.DatetimeIndex
+        ):
             tickvals = list(normalized_data.index)
             if len(tickvals) > 1:
                 # Always include first and last
                 x_tickvals = [tickvals[0], tickvals[-1]]
                 # Optionally, add more ticks for readability (e.g., every Nth)
                 n = max(1, len(tickvals) // 8)
-                x_tickvals += [tickvals[i] for i in range(n, len(tickvals)-1, n)]
+                x_tickvals += [tickvals[i] for i in range(n, len(tickvals) - 1, n)]
                 x_tickvals = sorted(set(x_tickvals), key=lambda x: x)
                 local_axis_options["x_tickvals"] = x_tickvals
             else:
                 local_axis_options["x_tickvals"] = tickvals
 
         # --- Determine xaxis_type and add to axis options ---
-        effective_xaxis_type = 'linear'  # Default
+        effective_xaxis_type = "linear"  # Default
         data_source_for_index_check = normalized_data
-        if data_source_for_index_check is not None and not data_source_for_index_check.empty:
+        if (
+            data_source_for_index_check is not None
+            and not data_source_for_index_check.empty
+        ):
             if xaxis_is_date:
-                effective_xaxis_type = 'date'
+                effective_xaxis_type = "date"
             else:
                 index_dtype = data_source_for_index_check.index.dtype
                 if pd.api.types.is_numeric_dtype(index_dtype):
-                    effective_xaxis_type = 'linear'
+                    effective_xaxis_type = "linear"
                 else:
-                    effective_xaxis_type = 'category'
-                    local_axis_options['x_tickformat'] = None
+                    effective_xaxis_type = "category"
+                    local_axis_options["x_tickformat"] = None
                     try:
                         from termcolor import colored
-                        print(colored(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}", "cyan"))
+
+                        print(
+                            colored(
+                                f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}",
+                                "cyan",
+                            )
+                        )
                     except ImportError:
-                        print(f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}")
-        local_axis_options['x_type'] = effective_xaxis_type
+                        print(
+                            f"[DEBUG] Setting xaxis_type to 'category' based on index dtype: {index_dtype}"
+                        )
+        local_axis_options["x_type"] = effective_xaxis_type
 
         # --- Call the Chart Function ---
         _add_metric_share_area_traces(
@@ -1415,15 +1551,23 @@ class BWRPlots:
             fig,
             local_axis_options,
             axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=xaxis_is_date
+            xaxis_is_date=xaxis_is_date,
         )
 
         # --- ADD THIS CALL ---
-        plot_type_key = 'metric_share_area' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
+        plot_type_key = "metric_share_area"  # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = (
+            self.config.get("plot_specific", {})
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_background_image' flag: {use_svg_flag_for_plot}"
+        )  # DEBUG
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_background_image..."
+        )  # DEBUG
+        self._apply_background_image(fig, plot_type_key)
         # --------------------
 
         # --- Add Watermark ---
@@ -1515,7 +1659,11 @@ class BWRPlots:
             print("Warning: No data provided for bar chart.")
             fig = make_subplots()  # Create an empty figure
             # Set a default date if none provided
-            effective_date = date if date is not None else datetime.datetime.now().strftime("%Y-%m-%d")
+            effective_date = (
+                date
+                if date is not None
+                else datetime.datetime.now().strftime("%Y-%m-%d")
+            )
             scaled_data = pd.DataFrame()  # Empty data for axis calc
             local_axis_options = {} if axis_options is None else axis_options.copy()
             axis_min_calculated = 0  # Default for empty
@@ -1532,7 +1680,9 @@ class BWRPlots:
                                 max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
                             )
                         except Exception as e:
-                            effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                            effective_date = datetime.datetime.now().strftime(
+                                "%Y-%m-%d"
+                            )
                             print(
                                 f"[Warning] bar_chart: Could not automatically determine max date: {e}. Using today's date."
                             )
@@ -1559,7 +1709,7 @@ class BWRPlots:
                     max_value = numeric_cols.max().max(skipna=True)
             elif isinstance(plot_data, pd.Series):
                 # Ensure series is numeric before max()
-                numeric_series = pd.to_numeric(plot_data, errors='coerce')
+                numeric_series = pd.to_numeric(plot_data, errors="coerce")
                 if not numeric_series.empty:
                     max_value = numeric_series.max(skipna=True)
 
@@ -1576,12 +1726,18 @@ class BWRPlots:
             if scale > 1:
                 try:
                     if isinstance(scaled_data, pd.DataFrame):
-                        numeric_cols_scale = scaled_data.select_dtypes(include=np.number).columns
+                        numeric_cols_scale = scaled_data.select_dtypes(
+                            include=np.number
+                        ).columns
                         if not numeric_cols_scale.empty:
-                            scaled_data[numeric_cols_scale] = scaled_data[numeric_cols_scale] / scale
+                            scaled_data[numeric_cols_scale] = (
+                                scaled_data[numeric_cols_scale] / scale
+                            )
                     elif isinstance(scaled_data, pd.Series):  # Series
                         # Ensure series is numeric before scaling
-                        numeric_series_scale = pd.to_numeric(scaled_data, errors='coerce')
+                        numeric_series_scale = pd.to_numeric(
+                            scaled_data, errors="coerce"
+                        )
                         scaled_data = numeric_series_scale / scale
                 except Exception as e:
                     print(f"Warning: Could not scale data: {e}.")
@@ -1594,23 +1750,27 @@ class BWRPlots:
             # Use scaled_data for range calculation
             temp_data_for_range = scaled_data  # Use the potentially scaled data
             if isinstance(temp_data_for_range, pd.DataFrame):
-                numeric_range_cols = temp_data_for_range.select_dtypes(include=np.number)
+                numeric_range_cols = temp_data_for_range.select_dtypes(
+                    include=np.number
+                )
                 if not numeric_range_cols.empty:
                     y_values_for_range = numeric_range_cols.values.flatten()
             elif isinstance(temp_data_for_range, pd.Series):
                 # Ensure series is numeric
-                numeric_range_series = pd.to_numeric(temp_data_for_range, errors='coerce')
+                numeric_range_series = pd.to_numeric(
+                    temp_data_for_range, errors="coerce"
+                )
                 if not numeric_range_series.empty:
                     y_values_for_range = numeric_range_series.values.flatten()
 
             # Drop NaNs before calculating params
             y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
 
-            if y_values_for_range:  # Check if list is not empty after potential NaN drop
+            if (
+                y_values_for_range
+            ):  # Check if list is not empty after potential NaN drop
                 yaxis_params = calculate_yaxis_grid_params(
-                    y_data=y_values_for_range,
-                    padding=0.05,
-                    num_gridlines=5
+                    y_data=y_values_for_range, padding=0.05, num_gridlines=5
                 )
                 axis_min_calculated = yaxis_params["tick0"]
                 # --- Add yaxis_params to local_axis_options ---
@@ -1620,7 +1780,9 @@ class BWRPlots:
                 local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
             else:
                 # Handle case where no valid numeric data exists after scaling/NaN drop
-                print("Warning: No valid numeric data available for Y-axis range calculation.")
+                print(
+                    "Warning: No valid numeric data available for Y-axis range calculation."
+                )
                 local_axis_options["primary_range"] = [0, 1]  # Default fallback range
                 axis_min_calculated = 0
 
@@ -1651,29 +1813,37 @@ class BWRPlots:
             fig,
             local_axis_options,
             axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=False # Bar charts have categorical x-axis
+            xaxis_is_date=False,  # Bar charts have categorical x-axis
         )
 
         # --- ADD THIS CALL ---
-        plot_type_key = 'bar' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
+        plot_type_key = "bar"  # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = (
+            self.config.get("plot_specific", {})
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_background_image' flag: {use_svg_flag_for_plot}"
+        )  # DEBUG
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_background_image..."
+        )  # DEBUG
+        self._apply_background_image(fig, plot_type_key)
         # --------------------
 
         # --- Apply Bar Chart Specific Layout Updates ---
         fig.update_layout(
             bargap=cfg_plot.get("bargap", 0.15),  # Set the gap between bars
-            xaxis_type='category'  # Explicitly set x-axis to category type
+            xaxis_type="category",  # Explicitly set x-axis to category type
         )
-        
+
         # Ensure grid lines are based on calculated ticks
         if yaxis_params:
             fig.update_yaxes(
                 tickmode=yaxis_params["tickmode"],
                 tick0=yaxis_params["tick0"],
-                dtick=yaxis_params["dtick"]
+                dtick=yaxis_params["dtick"],
             )
 
         # --- Add Watermark ---
@@ -1691,14 +1861,12 @@ class BWRPlots:
 
     def horizontal_bar(
         self,
-        data: pd.DataFrame,
+        data: Union[pd.DataFrame, pd.Series],
         title: str = "",
         subtitle: str = "",
         source: str = "",
         date: Optional[str] = None,
         height: Optional[int] = None,
-        y_column: Optional[str] = None,
-        x_column: Optional[str] = None,
         show_bar_values: bool = True,
         color_positive: Optional[str] = None,
         color_negative: Optional[str] = None,
@@ -1707,7 +1875,7 @@ class BWRPlots:
         bargap: Optional[float] = None,
         source_y: Optional[float] = None,
         source_x: Optional[float] = None,
-        legend_y: Optional[float] = None,  # Add legend_y back as an optional parameter
+        legend_y: Optional[float] = None,
         use_watermark: Optional[bool] = None,
         axis_options: Optional[Dict] = None,
         prefix: Optional[str] = None,
@@ -1715,20 +1883,19 @@ class BWRPlots:
         plot_area_b_padding: Optional[int] = None,
         save_image: bool = False,
         save_path: Optional[str] = None,
-        open_in_browser: bool = False,  # Defaulted to False like others
+        open_in_browser: bool = False,
     ) -> go.Figure:
         """
         Creates a Blockworks branded horizontal bar chart.
 
         Args:
-            data: DataFrame containing the data
+            data: Series or DataFrame containing the data. If Series, index is used as categories (Y-axis),
+                 values are used as bar lengths (X-axis). If DataFrame, first numeric column is used.
             title: Main title text
             subtitle: Subtitle text
             source: Source citation text
             date: Date for citation
             height: Plot height in pixels
-            y_column: Column name to use for y-axis categories
-            x_column: Column name to use for x-axis values
             show_bar_values: Whether to display values on top of bars
             color_positive: Color for positive values
             color_negative: Color for negative values
@@ -1754,7 +1921,8 @@ class BWRPlots:
         cfg_plot = self.config["plot_specific"]["horizontal_bar"]
         cfg_colors = self.config["colors"]
         cfg_wm = self.config["watermark"]
-        cfg_leg = self.config["legend"]  # Needed for default legend_y
+        cfg_leg = self.config["legend"]
+        cfg_axes = self.config["axes"]
 
         # --- Apply Overrides ---
         plot_height = height if height is not None else cfg_gen["height"]
@@ -1770,156 +1938,175 @@ class BWRPlots:
             if sort_ascending is not None
             else cfg_plot["default_sort_ascending"]
         )
-        current_y_column = (
-            y_column if y_column is not None else cfg_plot["default_y_column"]
-        )
-        current_x_column = (
-            x_column if x_column is not None else cfg_plot["default_x_column"]
-        )
-        current_legend_y = (
-            legend_y if legend_y is not None else cfg_leg["y"]
-        )  # Use legend_y if provided, otherwise use default from config
+        current_legend_y = legend_y if legend_y is not None else cfg_leg["y"]
 
-        # --- Data Validation ---
-        if data is None or data.empty:
+        # --- Data Validation & Preparation ---
+        if data is None or (hasattr(data, "empty") and data.empty):
             print("Warning: No data provided for horizontal bar chart.")
-            # Create an empty figure
-            fig = make_subplots()
-        else:
-            # Validate columns exist
-            if current_y_column not in data.columns:
-                print(
-                    f"Warning: Y column '{current_y_column}' not found in data. Columns available: {data.columns.tolist()}"
-                )
-                if len(data.columns) >= 1:
-                    current_y_column = data.columns[0]
-                    print(f"Using column '{current_y_column}' for Y-axis categories.")
-                else:
-                    print(
-                        "Cannot create plot: No valid columns available for Y-axis categories."
-                    )
-                    return go.Figure()  # Empty figure
+            return go.Figure()
 
-            if current_x_column not in data.columns:
-                print(
-                    f"Warning: X column '{current_x_column}' not found in data. Columns available: {data.columns.tolist()}"
-                )
-                if len(data.columns) >= 2:
-                    current_x_column = data.columns[1]
-                    print(f"Using column '{current_x_column}' for X-axis values.")
-                else:
-                    print(
-                        "Cannot create plot: No valid columns available for X-axis values."
-                    )
-                    return go.Figure()  # Empty figure
-
-            # --- Data Handling & Preparation ---
-            # Copy data to avoid modifying original
-            plot_data = data.copy()
-
-            # Ensure value column is numeric
-            if not pd.api.types.is_numeric_dtype(plot_data[current_x_column]):
-                try:
-                    plot_data[current_x_column] = pd.to_numeric(
-                        plot_data[current_x_column], errors="coerce"
-                    )
-                    print(f"Converted column '{current_x_column}' to numeric.")
-                except Exception as e:
-                    print(
-                        f"Warning: Could not convert X column '{current_x_column}' to numeric: {e}"
-                    )
-
-            # --- Determine Effective Date ---
-            effective_date = date if date is not None else ""
-
-            # --- Figure Creation ---
-            fig = make_subplots()
-
-            # --- Axis Options & Scaling ---
-            local_axis_options = {} if axis_options is None else axis_options.copy()
-            if prefix is not None:
-                local_axis_options["primary_prefix"] = prefix
-            # Remove scaling logic for parity with v3
-            if suffix is not None:
-                local_axis_options["primary_suffix"] = suffix
-            elif "primary_suffix" not in local_axis_options:
-                local_axis_options["primary_suffix"] = ""
-
-            # --- Calculate y-axis grid params for bottom gridline (for x-axis in horizontal bar) ---
-            axis_min_calculated = None
-            yaxis_params = None
-            x_values_for_range = plot_data[current_x_column].values.flatten()
-            if x_values_for_range is not None and len(x_values_for_range) > 0:
-                yaxis_params = calculate_yaxis_grid_params(
-                    y_data=x_values_for_range,
-                    padding=0.05,
-                    num_gridlines=5
-                )
-                axis_min_calculated = yaxis_params["tick0"]
-                # --- Add yaxis_params to local_axis_options ---
-                local_axis_options["primary_range"] = yaxis_params["range"]
-                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
-                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
-                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
-
-            # --- Call the Chart Function ---
-            _add_horizontal_bar_traces(
-                fig=fig,
-                data=plot_data,
-                x_column=current_x_column,
-                y_column=current_y_column,
-                bar_height=current_bar_height,
-                cfg_plot=cfg_plot,
-                cfg_colors=cfg_colors,
-                bargap=current_bargap,
-                color_positive=color_positive,
-                color_negative=color_negative,
-                show_bar_values=show_bar_values,
-                sort_ascending=current_sort_ascending,  # Add the missing sort_ascending parameter
+        # --- NEW Data Preparation ---
+        if isinstance(data, pd.DataFrame):
+            # Handle DataFrame input (e.g., use first numeric column as value, index as category)
+            # This part defines fallback behavior if called directly with a DataFrame
+            print(
+                "Warning: Horizontal bar received DataFrame, expected Series. Using index for Y and first numeric column for X."
             )
-            # --- DEBUG PRINT ---
-            import json
-            try:
-                from termcolor import colored
-                print(colored(f"[DEBUG HORIZONTAL_BAR] local_axis_options before _apply_common_axes:", "cyan"))
-            except ImportError:
-                print(f"[DEBUG HORIZONTAL_BAR] local_axis_options before _apply_common_axes:")
-            print(json.dumps(local_axis_options, indent=2, default=str))
+            numeric_cols = data.select_dtypes(include=np.number).columns
+            if not numeric_cols.any():
+                print(
+                    "Error: DataFrame input for horizontal bar has no numeric columns."
+                )
+                return go.Figure()
+            x_col_name = numeric_cols[0]
+            plot_data = data[x_col_name].copy()  # Now plot_data is a Series
+            plot_data.index = data.index  # Ensure index is preserved
+        elif isinstance(data, pd.Series):
+            plot_data = data.copy()  # Use the Series directly
+        else:
+            print(
+                "Error: Invalid data type passed to horizontal_bar. Expected Series or DataFrame."
+            )
+            return go.Figure()
 
-        # --- Apply Layout & Axes ---
-        self._apply_common_layout(
+        # Ensure values are numeric and index (categories) are strings
+        if not pd.api.types.is_numeric_dtype(plot_data.dtype):
+            plot_data = pd.to_numeric(plot_data, errors="coerce")
+            plot_data = plot_data.dropna()
+            if plot_data.empty:
+                print(
+                    "Error: No numeric data remaining after coercion in horizontal_bar."
+                )
+                return go.Figure()
+        if not pd.api.types.is_string_dtype(
+            plot_data.index.dtype
+        ) and not pd.api.types.is_categorical_dtype(plot_data.index.dtype):
+            plot_data.index = plot_data.index.astype(str)
+        # --- END NEW Data Preparation ---
+
+        # --- Determine Effective Date ---
+        effective_date = (
+            date if date is not None else datetime.datetime.now().strftime("%Y-%m-%d")
+        )
+
+        # --- Figure Creation ---
+        fig = make_subplots()
+
+        # --- START: Scaling and Axis Calculation for X-Axis (Values) ---
+        x_values_original = plot_data.dropna()
+        max_abs_x_value = x_values_original.abs().max()
+
+        scale_factor = 1.0
+        auto_suffix = ""
+        if pd.notna(max_abs_x_value):
+            scale_factor, auto_suffix = _get_scale_and_suffix(max_abs_x_value)
+
+        final_x_suffix = suffix if suffix is not None else auto_suffix
+        final_x_prefix = prefix if prefix is not None else ""
+
+        # Scale the data Series *before* calculating axis params and adding traces
+        scaled_plot_data = plot_data / scale_factor
+        scaled_x_values = scaled_plot_data.values
+
+        xaxis_params = {}
+        axis_min_calculated = None
+        if scaled_x_values.size > 0:
+            # Use calculate_yaxis_grid_params, but apply results to X-axis
+            xaxis_params_calc = calculate_yaxis_grid_params(
+                y_data=scaled_x_values, padding=0.05, num_gridlines=5
+            )
+            xaxis_params["range"] = xaxis_params_calc["range"]
+            xaxis_params["tick0"] = xaxis_params_calc["tick0"]
+            xaxis_params["dtick"] = xaxis_params_calc["dtick"]
+            xaxis_params["tickmode"] = xaxis_params_calc["tickmode"]
+            axis_min_calculated = xaxis_params_calc["tick0"]
+            if xaxis_params["dtick"] % 1 != 0:
+                xaxis_params["tickformat"] = ",.2f"
+            else:
+                xaxis_params["tickformat"] = ",.0f"
+        else:
+            print("Warning: No valid numeric data for X-axis range calculation.")
+            xaxis_params["range"] = [0, 1]
+            xaxis_params["tickformat"] = ",.0f"
+            axis_min_calculated = 0
+
+        xaxis_params["ticksuffix"] = final_x_suffix
+        xaxis_params["tickprefix"] = final_x_prefix
+        # --- END: Scaling and Axis Calculation ---
+
+        # --- Call the Chart Function ---
+        _add_horizontal_bar_traces(
+            fig=fig,
+            data=scaled_plot_data,
+            cfg_plot=cfg_plot,
+            cfg_colors=cfg_colors,
+            bargap=current_bargap,
+            bar_height=current_bar_height,
+            color_positive=color_positive,
+            color_negative=color_negative,
+            show_bar_values=show_bar_values,
+            sort_ascending=current_sort_ascending,
+        )
+
+        # --- Apply Layout (Common part) ---
+        total_height, bottom_margin = self._apply_common_layout(
             fig,
             title,
             subtitle,
             plot_height,
-            False,
-            0,
-            source,
-            effective_date,
-            source_x,
-            source_y,
+            show_legend=False,
+            legend_y=0,
+            source=source,
+            date=effective_date,
+            source_x=source_x,
+            source_y=source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(
-            fig,
-            local_axis_options,
-            axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=False # Horizontal bar charts have categorical y-axis (value x-axis is not date-based)
+
+        # --- START: Apply Specific Axes Configuration for Horizontal Bar ---
+        # Configure X-Axis (Values) using calculated xaxis_params
+        fig.update_xaxes(
+            title=dict(text="", font=self._get_font_dict("axis_title")),
+            tickprefix=xaxis_params.get("tickprefix", ""),
+            ticksuffix=xaxis_params.get("ticksuffix", ""),
+            tickfont=self._get_font_dict("tick"),
+            showgrid=cfg_axes["showgrid_y"],
+            gridcolor=cfg_axes["y_gridcolor"],
+            gridwidth=cfg_axes.get("gridwidth", 1),
+            range=xaxis_params.get("range"),
+            tickformat=xaxis_params.get("tickformat"),
+            linecolor=cfg_axes["linecolor"],
+            tickcolor="rgba(0,0,0,0)",
+            ticks="",
+            fixedrange=True,
         )
 
-        # --- ADD THIS CALL ---
-        plot_type_key = 'horizontal_bar' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
-        # --------------------
+        # Configure Y-Axis (Categories)
+        fig.update_yaxes(
+            title=dict(text="", font=self._get_font_dict("axis_title")),
+            type="category",
+            showgrid=False,
+            showline=False,
+            showticklabels=True,
+            tickfont=self._get_font_dict("tick"),
+            automargin=True,
+            categoryorder="array",
+            categoryarray=scaled_plot_data.sort_values(
+                ascending=current_sort_ascending
+            ).index.tolist(),
+            ticks="",
+            fixedrange=True,
+        )
+        # --- END: Apply Specific Axes Configuration ---
 
-        # --- Add Watermark ---
+        # --- Add watermark (optional) ---
         if use_watermark_flag:
-            self._add_watermark(fig)
+            self._add_watermark(fig, is_table=False)
 
-        # --- Save Plot as PNG (Optional) ---
+        # --- Add background image ---
+        self._apply_background_image(fig, "horizontal_bar")
+
+        # --- Export Options ---
         if save_image:
             success, message = save_plot_image(fig, title, save_path)
             if not success:
@@ -1939,7 +2126,7 @@ class BWRPlots:
         source_x: Optional[float] = None,
         source_y: Optional[float] = None,
         show_legend: bool = True,
-        group_days: Optional[int] = None,
+        group_days: Optional[int] = None,  # Kept for API compatibility, not used
         colors: Optional[Dict[str, str]] = None,
         scale_values: Optional[bool] = None,
         use_watermark: Optional[bool] = None,
@@ -2070,7 +2257,6 @@ class BWRPlots:
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
 
-        # Only scale if requested
         axis_min_calculated = None
         yaxis_params = None
         if current_scale:
@@ -2094,33 +2280,72 @@ class BWRPlots:
                     except Exception as e:
                         print(f"Warning: Could not scale data: {e}.")
                 # --- Calculate y-axis grid params for bottom gridline ---
-                y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
-                if y_values_for_range.size > 0:
+                y_values_for_range = plot_data.select_dtypes(
+                    include=np.number
+                ).values.flatten()
+                y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
+                if y_values_for_range:
                     yaxis_params = calculate_yaxis_grid_params(
-                        y_data=y_values_for_range,
-                        padding=0.05,
-                        num_gridlines=5
+                        y_data=y_values_for_range, padding=0.05, num_gridlines=5
                     )
                     axis_min_calculated = yaxis_params["tick0"]
-                    # --- Add yaxis_params to local_axis_options ---
                     local_axis_options["primary_range"] = yaxis_params["range"]
                     local_axis_options["primary_tick0"] = yaxis_params["tick0"]
                     local_axis_options["primary_dtick"] = yaxis_params["dtick"]
                     local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
-                # --- DEBUG PRINT ---
-                import json
-                try:
-                    from termcolor import colored
-                    print(colored(f"[DEBUG MULTI_BAR] local_axis_options before _apply_common_axes:", "cyan"))
-                except ImportError:
-                    print(f"[DEBUG MULTI_BAR] local_axis_options before _apply_common_axes:")
-                print(json.dumps(local_axis_options, indent=2, default=str))
+                else:
+                    print(
+                        "[Warning] multi_bar: No valid numeric data for Y-axis range after scaling."
+                    )
+                    local_axis_options["primary_range"] = [0, 1]
+                    axis_min_calculated = 0
             else:
                 if suffix is not None:
                     local_axis_options["primary_suffix"] = suffix
+                else:
+                    local_axis_options["primary_suffix"] = ""
+                print(
+                    "[Warning] multi_bar: No numeric data found for scaling or axis calculation."
+                )
+                local_axis_options["primary_range"] = [0, 1]
+                axis_min_calculated = 0
         else:
             if suffix is not None:
                 local_axis_options["primary_suffix"] = suffix
+            else:
+                local_axis_options["primary_suffix"] = ""
+            y_values_for_range = plot_data.select_dtypes(
+                include=np.number
+            ).values.flatten()
+            y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
+            if y_values_for_range:
+                yaxis_params = calculate_yaxis_grid_params(
+                    y_data=y_values_for_range, padding=0.05, num_gridlines=5
+                )
+                axis_min_calculated = yaxis_params["tick0"]
+                local_axis_options["primary_range"] = yaxis_params["range"]
+                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
+                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+            else:
+                print(
+                    "[Warning] multi_bar: No valid numeric data for Y-axis range (scaling disabled)."
+                )
+                local_axis_options["primary_range"] = [0, 1]
+                axis_min_calculated = 0
+
+        # --- Determine xaxis_type ---
+        effective_xaxis_type = "linear"
+        if not plot_data.empty:
+            if xaxis_is_date and isinstance(plot_data.index, pd.DatetimeIndex):
+                effective_xaxis_type = "date"
+            elif not xaxis_is_date:
+                effective_xaxis_type = "category"
+            elif not pd.api.types.is_numeric_dtype(plot_data.index.dtype):
+                effective_xaxis_type = "category"
+        local_axis_options["x_type"] = effective_xaxis_type
+        if effective_xaxis_type == "category":
+            local_axis_options["x_tickformat"] = None
 
         # --- Call the Chart Function ---
         _add_multi_bar_traces(
@@ -2151,15 +2376,23 @@ class BWRPlots:
             fig,
             local_axis_options,
             axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=xaxis_is_date
+            xaxis_is_date=xaxis_is_date,
         )
 
         # --- ADD THIS CALL ---
-        plot_type_key = 'multi_bar' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
+        plot_type_key = "multi_bar"  # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = (
+            self.config.get("plot_specific", {})
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_background_image' flag: {use_svg_flag_for_plot}"
+        )  # DEBUG
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_background_image..."
+        )  # DEBUG
+        self._apply_background_image(fig, plot_type_key)
         # --------------------
 
         # --- Add Watermark ---
@@ -2186,7 +2419,7 @@ class BWRPlots:
         source_x: Optional[float] = None,
         source_y: Optional[float] = None,
         show_legend: bool = True,
-        group_days: Optional[int] = None,
+        group_days: Optional[int] = None,  # Kept for API compatibility, not used
         colors: Optional[Dict[str, str]] = None,
         scale_values: Optional[bool] = None,
         sort_descending: Optional[bool] = None,
@@ -2319,9 +2552,12 @@ class BWRPlots:
             local_axis_options["primary_title"] = y_axis_title
 
         # --- NEW STACKED BAR SCALING LOGIC ---
-        # STEP 3: Calculate Max Total Bar Height (sum across rows)
+        # STEP 3: Calculate Max Total Bar Height (sum across columns for each row)
         max_total_value = 0
-        numeric_data_for_sum = plot_data.select_dtypes(include=np.number)
+        numeric_data_for_sum = plot_data.select_dtypes(
+            include=np.number
+        )  # Use original plot_data here
+        row_sums = pd.Series(dtype=float)  # Initialize empty Series
         if not numeric_data_for_sum.empty:
             row_sums = numeric_data_for_sum.sum(axis=1)
             if not row_sums.empty:
@@ -2331,9 +2567,17 @@ class BWRPlots:
         # Optional debug
         try:
             from termcolor import colored
-            print(colored(f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}", "cyan"))
+
+            print(
+                colored(
+                    f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}",
+                    "cyan",
+                )
+            )
         except ImportError:
-            print(f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}")
+            print(
+                f"[DEBUG STACKED_BAR] Calculated max_total_value (unscaled): {max_total_value}"
+            )
 
         # STEP 4: Determine Scaling Factor and Suffix (Based on Total Height)
         scale_factor = 1.0  # Default to no scaling
@@ -2351,83 +2595,215 @@ class BWRPlots:
 
         try:
             from termcolor import colored
-            print(colored(f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'", "cyan"))
+
+            print(
+                colored(
+                    f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'",
+                    "cyan",
+                )
+            )
         except ImportError:
-            print(f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'")
+            print(
+                f"[DEBUG STACKED_BAR] Determined scale_factor: {scale_factor}, final_suffix: '{final_suffix}'"
+            )
 
         local_axis_options["primary_suffix"] = final_suffix
 
-        # STEP 5: Calculate *Unscaled* Axis Parameters using row sums
+        # --- ADD THIS ---
+        # Calculate scaled row sums for axis parameter calculation
+        scaled_row_sums = pd.Series(dtype=float)
+        if not row_sums.empty and scale_factor != 0:  # Check scale_factor != 0
+            scaled_row_sums = row_sums / scale_factor
+        # --- END ADD ---
+
+        # STEP 5: Calculate Axis Parameters using SCALED row sums
         yaxis_params = None
         axis_min_calculated = None
-        if not numeric_data_for_sum.empty and not row_sums.empty and row_sums.notna().any():
-            valid_row_sums = row_sums.dropna()
-            if not valid_row_sums.empty:
+        # Use scaled_row_sums here
+        if not scaled_row_sums.empty and scaled_row_sums.notna().any():
+            valid_scaled_row_sums = scaled_row_sums.dropna()
+            if not valid_scaled_row_sums.empty:
                 yaxis_params = calculate_yaxis_grid_params(
-                    y_data=valid_row_sums.values,
-                    padding=0.05,
-                    num_gridlines=5
+                    y_data=valid_scaled_row_sums.values, padding=0.05, num_gridlines=5
                 )
                 axis_min_calculated = yaxis_params["tick0"]
-                try:
-                    from termcolor import colored
-                    print(colored(f"[DEBUG STACKED_BAR] Calculated yaxis_params (unscaled): {yaxis_params}", "cyan"))
-                except ImportError:
-                    print(f"[DEBUG STACKED_BAR] Calculated yaxis_params (unscaled): {yaxis_params}")
-            else:
-                print("[DEBUG STACKED_BAR] No valid (non-NaN) row sums found for axis calculation.")
-                yaxis_params = {"range": [0, 1], "tick0": 0, "dtick": 0.2, "tickmode": "linear"}
-                axis_min_calculated = 0
-        else:
-            print("[DEBUG STACKED_BAR] No numeric data or row sums available for axis calculation.")
-            yaxis_params = {"range": [0, 1], "tick0": 0, "dtick": 0.2, "tickmode": "linear"}
-            axis_min_calculated = 0
-
-        # STEP 6: Conditionally Scale Axis Parameters for Override
-        if yaxis_params:
-            if scale_factor > 1.0:
-                local_axis_options["primary_range"] = [val / scale_factor for val in yaxis_params["range"]]
-                local_axis_options["primary_tick0"] = yaxis_params["tick0"] / scale_factor
-                local_axis_options["primary_dtick"] = yaxis_params["dtick"] / scale_factor
-                try:
-                    from termcolor import colored
-                    print(colored(f"[DEBUG STACKED_BAR] Applied scaling to axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}", "cyan"))
-                except ImportError:
-                    print(f"[DEBUG STACKED_BAR] Applied scaling to axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}")
-            else:
+                # --- Store results directly in local_axis_options ---
                 local_axis_options["primary_range"] = yaxis_params["range"]
                 local_axis_options["primary_tick0"] = yaxis_params["tick0"]
                 local_axis_options["primary_dtick"] = yaxis_params["dtick"]
+                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                # --- End Store ---
                 try:
                     from termcolor import colored
-                    print(colored(f"[DEBUG STACKED_BAR] Using unscaled axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}", "cyan"))
+
+                    print(
+                        colored(
+                            f"[DEBUG STACKED_BAR] Calculated yaxis_params (SCALED): {yaxis_params}",
+                            "cyan",
+                        )
+                    )
                 except ImportError:
-                    print(f"[DEBUG STACKED_BAR] Using unscaled axis params: range={local_axis_options['primary_range']}, tick0={local_axis_options['primary_tick0']}, dtick={local_axis_options['primary_dtick']}")
-            local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                    print(
+                        f"[DEBUG STACKED_BAR] Calculated yaxis_params (SCALED): {yaxis_params}"
+                    )
+            else:
+                print(
+                    "[DEBUG STACKED_BAR] No valid (non-NaN) SCALED row sums found for axis calculation."
+                )
+                # Set default scaled params
+                local_axis_options["primary_range"] = [0, 1]
+                local_axis_options["primary_tick0"] = 0
+                local_axis_options["primary_dtick"] = 0.2
+                local_axis_options["primary_tickmode"] = "linear"
+                axis_min_calculated = 0
         else:
-            print("[DEBUG STACKED_BAR] yaxis_params is None, applying default range.")
+            print(
+                "[DEBUG STACKED_BAR] No scaled row sums available for axis calculation."
+            )
+            # Set default scaled params
             local_axis_options["primary_range"] = [0, 1]
+            local_axis_options["primary_tick0"] = 0
+            local_axis_options["primary_dtick"] = 0.2
+            local_axis_options["primary_tickmode"] = "linear"
+            axis_min_calculated = 0
 
         # --- Ensure standard tick format is set if not otherwise specified ---
         if "primary_tickformat" not in local_axis_options:
-            local_axis_options["primary_tickformat"] = cfg_plot.get("y_tickformat", ",.0f")
+            local_axis_options["primary_tickformat"] = cfg_plot.get(
+                "y_tickformat", ",.0f"
+            )
 
-        # STEP 7: Remove/Comment Out Old Scaling Logic
-        # (Old logic removed)
-
-        # STEP 8: Apply Scaling to Plot Data (for Traces) - Place *before* _add_stacked_bar_traces
+        # STEP 8: Apply Scaling to Plot Data (for Traces)
         if scale_factor > 1.0:
             try:
-                numeric_cols_to_scale = plot_data.select_dtypes(include=np.number).columns
+                numeric_cols_to_scale = plot_data.select_dtypes(
+                    include=np.number
+                ).columns
                 if not numeric_cols_to_scale.empty:
-                    plot_data[numeric_cols_to_scale] = plot_data[numeric_cols_to_scale] / scale_factor
+                    plot_data[numeric_cols_to_scale] = (
+                        plot_data[numeric_cols_to_scale] / scale_factor
+                    )
                     try:
                         from termcolor import colored
-                        print(colored(f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}", "cyan"))
+
+                        print(
+                            colored(
+                                f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}",
+                                "cyan",
+                            )
+                        )
                     except ImportError:
-                        print(f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}")
+                        print(
+                            f"[DEBUG STACKED_BAR] Scaled plot_data for traces by factor {scale_factor}"
+                        )
             except Exception as e:
                 print(f"Warning: Could not scale plot_data before adding traces: {e}.")
+
+        # --- START DEBUG BLOCK ---
+        try:
+            from termcolor import colored
+
+            print(colored("--- DEBUG: stacked_bar_chart ---", "cyan"))
+            print(colored(f"Final yaxis_params calculated: {yaxis_params}", "yellow"))
+            print(
+                colored(f"axis_min_calculated (tick0): {axis_min_calculated}", "yellow")
+            )
+            # Print key axis options being passed
+            print(colored("local_axis_options relevant for Y-axis:", "yellow"))
+            print(
+                colored(
+                    f"  primary_range: {local_axis_options.get('primary_range')}",
+                    "yellow",
+                )
+            )
+            print(
+                colored(
+                    f"  primary_tick0: {local_axis_options.get('primary_tick0')}",
+                    "yellow",
+                )
+            )
+            print(
+                colored(
+                    f"  primary_dtick: {local_axis_options.get('primary_dtick')}",
+                    "yellow",
+                )
+            )
+            print(
+                colored(
+                    f"  primary_tickmode: {local_axis_options.get('primary_tickmode')}",
+                    "yellow",
+                )
+            )
+            print(
+                colored(
+                    f"  primary_suffix: {local_axis_options.get('primary_suffix')}",
+                    "yellow",
+                )
+            )
+            print(
+                colored(
+                    f"  primary_tickformat: {local_axis_options.get('primary_tickformat')}",
+                    "yellow",
+                )
+            )
+            # Print info about the data going into traces
+            print(colored("Data passed to _add_stacked_bar_traces:", "magenta"))
+            print(colored(f"  plot_data type: {type(plot_data)}", "magenta"))
+            if isinstance(plot_data, (pd.DataFrame, pd.Series)):
+                print(colored(f"  plot_data shape: {plot_data.shape}", "magenta"))
+                print(
+                    colored(
+                        f"  plot_data index type: {type(plot_data.index)}", "magenta"
+                    )
+                )
+                print(
+                    colored(
+                        f"  plot_data index name: {plot_data.index.name}", "magenta"
+                    )
+                )
+                print(
+                    colored(
+                        f"  plot_data head:\n{plot_data.head().to_string()}", "magenta"
+                    )
+                )
+                print(
+                    colored(
+                        f"  plot_data Is Null Sum:\n{plot_data.isnull().sum().to_string()}",
+                        "magenta",
+                    )
+                )
+            else:
+                print(colored(f"  plot_data value: {plot_data}", "magenta"))
+            print(colored("--- END DEBUG: stacked_bar_chart ---", "cyan"))
+
+        except ImportError:
+            # Fallback if termcolor is not installed
+            print("--- DEBUG: stacked_bar_chart ---")
+            print(f"Final yaxis_params calculated: {yaxis_params}")
+            print(f"axis_min_calculated (tick0): {axis_min_calculated}")
+            print("local_axis_options relevant for Y-axis:")
+            print(f"  primary_range: {local_axis_options.get('primary_range')}")
+            print(f"  primary_tick0: {local_axis_options.get('primary_tick0')}")
+            print(f"  primary_dtick: {local_axis_options.get('primary_dtick')}")
+            print(f"  primary_tickmode: {local_axis_options.get('primary_tickmode')}")
+            print(f"  primary_suffix: {local_axis_options.get('primary_suffix')}")
+            print(
+                f"  primary_tickformat: {local_axis_options.get('primary_tickformat')}"
+            )
+            print("Data passed to _add_stacked_bar_traces:")
+            print(f"  plot_data type: {type(plot_data)}")
+            if isinstance(plot_data, (pd.DataFrame, pd.Series)):
+                print(f"  plot_data shape: {plot_data.shape}")
+                print(f"  plot_data index type: {type(plot_data.index)}")
+                print(f"  plot_data index name: {plot_data.index.name}")
+                print(f"  plot_data head:\n{plot_data.head().to_string()}")
+                print(
+                    f"  plot_data Is Null Sum:\n{plot_data.isnull().sum().to_string()}"
+                )
+            else:
+                print(f"  plot_data value: {plot_data}")
+            print("--- END DEBUG: stacked_bar_chart ---")
+        # --- END DEBUG BLOCK ---
 
         # --- Call the Chart Function ---
         _add_stacked_bar_traces(
@@ -2459,16 +2835,47 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated,
-            xaxis_is_date=xaxis_is_date
+            axis_min_calculated=local_axis_options.get(
+                "primary_tick0", axis_min_calculated
+            ),
+            xaxis_is_date=xaxis_is_date,
         )
 
+        # --- START INSERTED CODE ---
+        # Explicitly reinforce the x-axis type based on the flag
+        try:
+            from termcolor import colored
+
+            final_xaxis_type = "date" if xaxis_is_date else "category"
+            print(
+                colored(
+                    f"[DEBUG STACKED_BAR] Explicitly setting fig.update_layout(xaxis_type='{final_xaxis_type}')",
+                    "blue",
+                )
+            )
+        except ImportError:
+            final_xaxis_type = "date" if xaxis_is_date else "category"
+            print(
+                f"[DEBUG STACKED_BAR] Explicitly setting fig.update_layout(xaxis_type='{final_xaxis_type}')"
+            )
+
+        fig.update_layout(xaxis_type=final_xaxis_type)
+        # --- END INSERTED CODE ---
+
         # --- ADD THIS CALL ---
-        plot_type_key = 'stacked_bar' # e.g., 'scatter', 'bar', 'multi_bar'
-        use_svg_flag_for_plot = self.config.get('plot_specific', {}).get(plot_type_key, {}).get('use_svg_background', False)
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_svg_background' flag: {use_svg_flag_for_plot}") # DEBUG
-        print(f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_svg_background...") # DEBUG
-        self._apply_svg_background(fig, plot_type_key)
+        plot_type_key = "stacked_bar"  # e.g., 'scatter', 'bar', 'multi_bar'
+        use_svg_flag_for_plot = (
+            self.config.get("plot_specific", {})
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Checking 'use_background_image' flag: {use_svg_flag_for_plot}"
+        )  # DEBUG
+        print(
+            f"[DEBUG] Plot Method ({plot_type_key}): Calling _apply_background_image..."
+        )  # DEBUG
+        self._apply_background_image(fig, plot_type_key)
         # --------------------
 
         # --- Add Watermark ---
@@ -2569,7 +2976,9 @@ class BWRPlots:
 
         # Watermark logic
         use_watermark_flag = (
-            use_watermark if use_watermark is not None else cfg_wm.get("default_use", True)
+            use_watermark
+            if use_watermark is not None
+            else cfg_wm.get("default_use", True)
         )
         if use_watermark_flag:
             self._add_watermark(fig, is_table=True)
@@ -2579,11 +2988,13 @@ class BWRPlots:
             success, path_or_msg = save_plot_image(fig, title, save_path)
             if open_in_browser and success:
                 import webbrowser
+
                 webbrowser.open(f"file://{path_or_msg}")
         elif open_in_browser:
             # Save to temp HTML and open
             import tempfile
             import webbrowser
+
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
                 fig.write_html(tmp.name, include_plotlyjs="cdn", full_html=True)
                 webbrowser.open(f"file://{tmp.name}")
@@ -2591,39 +3002,66 @@ class BWRPlots:
         return fig
 
     # --- ADD THIS NEW METHOD ---
-    def _apply_svg_background(self, fig: go.Figure, plot_type_key: str) -> None:
-        """Applies the loaded SVG background as a layout image if configured."""
-        print(f"[DEBUG] Apply SVG BG: Entered for plot_type_key: '{plot_type_key}'") # DEBUG
+    def _apply_background_image(self, fig: go.Figure, plot_type_key: str) -> None:
+        """Applies the loaded background image as a layout image if configured."""
+        print(
+            f"[DEBUG] Apply BG Image: Entered for plot_type_key: '{plot_type_key}'"
+        )  # DEBUG
 
         if plot_type_key == "table":  # Explicitly skip for tables
-            print(f"[DEBUG] Apply SVG BG: Skipping for plot type 'table'.") # DEBUG
+            print(f"[DEBUG] Apply BG Image: Skipping for plot type 'table'.")  # DEBUG
             return
 
-        use_svg_bg = self.config["plot_specific"].get(plot_type_key, {}).get("use_svg_background", False)
-        print(f"[DEBUG] Apply SVG BG: 'use_svg_background' flag for '{plot_type_key}': {use_svg_bg}") # DEBUG
-        svg_data_available = self.svg_background_data is not None
-        print(f"[DEBUG] Apply SVG BG: SVG data available (self.svg_background_data is not None): {svg_data_available}") # DEBUG
+        use_bg_image = (
+            self.config["plot_specific"]
+            .get(plot_type_key, {})
+            .get("use_background_image", False)
+        )
+        print(
+            f"[DEBUG] Apply BG Image: 'use_background_image' flag for '{plot_type_key}': {use_bg_image}"
+        )  # DEBUG
+        image_data_available = self.background_image_data is not None
+        print(
+            f"[DEBUG] Apply BG Image: Image data available (self.background_image_data is not None): {image_data_available}"
+        )  # DEBUG
 
-        if use_svg_bg and self.svg_background_data:
-            print(f"[DEBUG] Apply SVG BG: Conditions met. Attempting to add layout image and update plot_bgcolor.") # DEBUG
+        if use_bg_image and self.background_image_data:
+            print(
+                f"[DEBUG] Apply BG Image: Conditions met. Attempting to add layout image and update backgrounds."
+            )  # DEBUG - Updated log message
             try:
                 fig.add_layout_image(
-                    source=self.svg_background_data,
-                    xref="paper", yref="paper",
-                    x=0, y=0,
-                    sizex=1, sizey=1,
-                    sizing="stretch",  # Stretch to fill the plot area
-                    layer="below",     # Place behind data traces
-                    opacity=1.0         # Full opacity
+                    source=self.background_image_data,
+                    xref="paper",
+                    yref="paper",
+                    x=-0.08,
+                    y=1.31,  # Anchor bottom-left corner at (0,0) of the paper
+                    sizex=1.125,  # Span 100% width of the paper
+                    sizey=1.598,  # Span 100% height of the paper
+                    sizing="stretch",  # Stretch to fill the dimensions
+                    layer="below",  # Place behind data traces
+                    opacity=1.0,  # Full opacity
                 )
-                # Set plot_bgcolor to transparent so SVG shows through
-                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')
-                print(f"[DEBUG] Apply SVG BG: Successfully added layout image and set plot_bgcolor to transparent.") # DEBUG
+                # Set BOTH plot_bgcolor AND paper_bgcolor to transparent
+                fig.update_layout(
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",  # ADD THIS LINE
+                )
+                print(
+                    f"[DEBUG] Apply BG Image: Successfully added layout image and set plot_bgcolor AND paper_bgcolor to transparent."  # Updated log message
+                )  # DEBUG
             except Exception as e:
-                print(f"[DEBUG] Apply SVG BG: Exception during Plotly calls: {type(e).__name__}") # DEBUG
-                print(f"Warning: Failed to apply SVG background for plot type '{plot_type_key}': {e}")
-        elif not use_svg_bg:
-             print(f"[DEBUG] Apply SVG BG: Skipping because 'use_svg_background' is False for '{plot_type_key}'.") # DEBUG
-        elif not self.svg_background_data:
-             print(f"[DEBUG] Apply SVG BG: Skipping because SVG data was not loaded (self.svg_background_data is None).") # DEBUG
-    # --------------------------
+                print(
+                    f"[DEBUG] Apply BG Image: Exception during Plotly calls: {type(e).__name__}"
+                )  # DEBUG
+                print(
+                    f"Warning: Failed to apply background image for plot type '{plot_type_key}': {e}"
+                )
+        elif not use_bg_image:
+            print(
+                f"[DEBUG] Apply BG Image: Skipping because 'use_background_image' is False for '{plot_type_key}'."
+            )  # DEBUG
+        elif not self.background_image_data:
+            print(
+                f"[DEBUG] Apply BG Image: Skipping because image data was not loaded (self.background_image_data is None)."
+            )  # DEBUG

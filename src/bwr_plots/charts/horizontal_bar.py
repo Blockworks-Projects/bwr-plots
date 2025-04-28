@@ -6,9 +6,7 @@ from typing import Dict, List, Optional, Union, Tuple, Any
 
 def _add_horizontal_bar_traces(
     fig: go.Figure,
-    data: pd.DataFrame,
-    y_column: str,
-    x_column: str,
+    data: pd.Series,
     cfg_plot: Dict,
     cfg_colors: Dict,
     sort_ascending: bool,
@@ -23,9 +21,7 @@ def _add_horizontal_bar_traces(
 
     Args:
         fig: The plotly figure object to add traces to
-        data: DataFrame containing the data
-        y_column: Column name to use for y-axis categories
-        x_column: Column name to use for x-axis values
+        data: Series containing the data with categories as index and values as data
         cfg_plot: Plot-specific configuration
         cfg_colors: Color configuration
         sort_ascending: Whether to sort the bars in ascending order by value
@@ -39,31 +35,18 @@ def _add_horizontal_bar_traces(
         print("Warning: No data provided for horizontal bar chart.")
         return
 
-    # Validate columns exist
-    if y_column not in data.columns:
-        print(
-            f"Warning: Y column '{y_column}' not found in data. Columns available: {data.columns.tolist()}"
-        )
-        return
-
-    if x_column not in data.columns:
-        print(
-            f"Warning: X column '{x_column}' not found in data. Columns available: {data.columns.tolist()}"
-        )
-        return
-
-    # Sort data
-    sorted_data = data.sort_values(by=x_column, ascending=sort_ascending)
+    # Sort data if requested
+    sorted_data = data.sort_values(ascending=sort_ascending)
 
     # Get colors
     pos_color = color_positive or cfg_colors.get("hbar_positive", "#5637cd")
     neg_color = color_negative or cfg_colors.get("hbar_negative", "#EF798A")
 
     # Create colors array based on value sign
-    colors = [pos_color if val >= 0 else neg_color for val in sorted_data[x_column]]
+    colors = [pos_color if val >= 0 else neg_color for val in sorted_data.values]
 
     if show_bar_values:
-        text_values = sorted_data[x_column].apply(lambda x: f"{x:,.0f}")
+        text_values = sorted_data.apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
         textposition = cfg_plot.get("textposition", "outside")
     else:
         text_values = None
@@ -72,8 +55,8 @@ def _add_horizontal_bar_traces(
     # Create the horizontal bar trace
     fig.add_trace(
         go.Bar(
-            y=sorted_data[y_column],
-            x=sorted_data[x_column],
+            y=sorted_data.index,  # Use index for categories (Y)
+            x=sorted_data.values,  # Use values for bar lengths (X)
             orientation=cfg_plot.get("orientation", "h"),
             text=text_values,
             textposition=textposition,
