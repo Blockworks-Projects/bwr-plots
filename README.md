@@ -184,7 +184,7 @@ Refer to the Python scripts in the `examples/` directory for detailed usage patt
 
 ## Requirements
 
--   Python >= 3.12
+-   Python = ^3.10
 -   pandas >= 2.0.0
 -   plotly >= 5.10.0
 -   numpy >= 1.20.0

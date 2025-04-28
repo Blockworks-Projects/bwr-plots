@@ -1,5 +1,4 @@
 # To-Do List
-- Add multi-axis for scatterplot
 - Add Table Feature
-
-- Background
+- Light Mode
+- Multi-axis for Scatterplot
