@@ -161,7 +161,7 @@ DEFAULT_BWR_CONFIG = {
         },
         "bar": {
             "bargap": 0.15,
-            "use_background_image": False,
+            "use_background_image": True,
         },
         "horizontal_bar": {
             "orientation": "h",
