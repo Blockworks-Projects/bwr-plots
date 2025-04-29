@@ -841,6 +841,50 @@ with main_col:
                                         if end_date_str
                                         else None
                                     )
+
+                                    # --- Start Inserted Timezone Handling ---
+                                    if data_for_plot.index.tz is not None:
+                                        # Index is timezone-aware
+                                        index_tz = (
+                                            data_for_plot.index.tz
+                                        )  # Get the timezone object from the index
+                                        print(
+                                            f"[DEBUG] Index is tz-aware with tz: {index_tz}. Localizing filter dates."
+                                        )
+
+                                        # Localize start_f if it exists and is naive
+                                        if (
+                                            start_f is not None
+                                            and start_f.tzinfo is None
+                                        ):
+                                            try:
+                                                start_f = start_f.tz_localize(index_tz)
+                                                print(
+                                                    f"[DEBUG] Localized start_f: {start_f}"
+                                                )
+                                            except Exception as tz_err:
+                                                st.warning(
+                                                    f"Could not localize start date to index timezone ({index_tz}): {tz_err}"
+                                                )
+                                                # Decide how to handle: maybe skip filtering or revert start_f to None?
+                                                # For now, let it proceed, the .loc might still fail if end_f is different.
+
+                                        # Localize end_f if it exists and is naive
+                                        if end_f is not None and end_f.tzinfo is None:
+                                            try:
+                                                end_f = end_f.tz_localize(index_tz)
+                                                print(
+                                                    f"[DEBUG] Localized end_f: {end_f}"
+                                                )
+                                                # Optional: Adjust end_f to include the whole day if desired for filtering
+                                                # end_f = end_f + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+                                            except Exception as tz_err:
+                                                st.warning(
+                                                    f"Could not localize end date to index timezone ({index_tz}): {tz_err}"
+                                                )
+                                                # Handle as above for start_f
+                                    # --- End Inserted Timezone Handling ---
+
                                     if start_f or end_f:
                                         data_for_plot = data_for_plot.loc[start_f:end_f]
                                         # st.info(f"Applied date window filter: {start_f} to {end_f}.")
