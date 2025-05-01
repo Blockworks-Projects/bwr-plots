@@ -189,36 +189,36 @@ def card(title: str):
 
 
 def build_plot(
-    df: pd.DataFrame,  # Accepts the ALREADY PROCESSED DataFrame
+    df: pd.DataFrame,
     plotter: "BWRPlots",
     plot_type_display: str,
-    column_mappings: dict,  # Pass the mappings dict
+    column_mappings: dict,
     title: str,
     subtitle: str,
     source: str,
     prefix: str,
     suffix: str,
     xaxis_is_date: bool,
-    date_override: Optional[str] = None,  # <-- ADD THIS PARAMETER
+    date_override: Optional[str] = None,
+    xaxis_title: str = "",
+    yaxis_title: str = "",
     **styling_kwargs,
 ):
-    """
-    Builds the plot using the specified plotter and arguments,
-    then applies date override if provided.
-    """
-    # Start with arguments common to almost all plots
+    """Builds the plot using the selected type and configuration."""
+
     plot_args_base = dict(
         title=title,
         subtitle=subtitle,
         source=source,
         prefix=prefix,
         suffix=suffix,
-        save_image=False,  # Default internal behavior for app display
-        open_in_browser=False,  # Default internal behavior for app display
+        save_image=False,
+        open_in_browser=False,
+        x_axis_title=xaxis_title if xaxis_title else None,
+        y_axis_title=yaxis_title if yaxis_title else None,
     )
 
     # Add specific column mappings if they exist and are needed (e.g., for horizontal_bar)
-    # Note: BWRPlots methods expect specific arg names (e.g., y_column, x_column)
     if column_mappings:
         plot_args_base.update(column_mappings)
 
@@ -702,6 +702,26 @@ with sidebar_col:
         )
         y_prefix = st.text_input("Y-axis prefix", "", key="y_prefix")
         y_suffix = st.text_input("Y-axis suffix", "", key="y_suffix")
+
+        # --- BEGIN ADDITION ---
+        # Conditionally show axis title inputs if X-axis is not a date
+        xaxis_titles_visible = not st.session_state.get("data_xaxis_is_date", True)
+        if xaxis_titles_visible:
+            st.markdown("---")  # Visual separator
+            st.caption("Specify Axis Titles (for non-date X-axis):")
+            st.text_input(
+                "X-Axis Title",
+                "",
+                key="plot_xaxis_title",
+                help="Title for the horizontal axis.",
+            )
+            st.text_input(
+                "Y-Axis Title",
+                "",
+                key="plot_yaxis_title",
+                help="Title for the vertical axis.",
+            )
+        # --- END ADDITION ---
     else:
         st.info("Upload a CSV or XLSX file to begin.")  # Message when no data
 
@@ -1028,6 +1048,8 @@ with main_col:
                     plot_type_display in SMOOTHING_PLOT_TYPES
                     and smoothing_window > 1
                     and is_datetime_index
+                    and plot_type_display
+                    != "Metric Share Area Plot"  # Skip for this type, handled internally
                 ):
                     try:
                         numeric_cols = data_for_plot.select_dtypes(
@@ -1061,11 +1083,18 @@ with main_col:
                 y_prefix = st.session_state.get("y_prefix", "")
                 y_suffix = st.session_state.get("y_suffix", "")
 
-                # --- ADD THIS LINE to retrieve the override value ---
+                # --- Retrieve plot date override ---
                 plot_date_override_value = st.session_state.get(
                     "plot_date_override", ""
                 ).strip()
-                # --- END ADDITION ---
+
+                # --- Retrieve conditional axis titles ---
+                current_xaxis_is_date = st.session_state.get("data_xaxis_is_date", True)
+                x_axis_title_val = ""
+                y_axis_title_val = ""
+                if not current_xaxis_is_date:
+                    x_axis_title_val = st.session_state.get("plot_xaxis_title", "")
+                    y_axis_title_val = st.session_state.get("plot_yaxis_title", "")
 
                 is_plotly_chart = plot_type_display != "Table (AG-Grid)"
                 is_aggrid_table = plot_type_display == "Table (AG-Grid)"
@@ -1098,22 +1127,43 @@ with main_col:
                 elif is_plotly_chart:
                     if plotter is None:
                         st.error("Plotter instance error.")
+                        # Add check for required plotter instance
+                        if (
+                            "plotter_instance" not in st.session_state
+                            or st.session_state.plotter_instance is None
+                        ):
+                            st.error("Plotter not initialized. Please re-upload data.")
+                            st.stop()
                         st.stop()
                     with st.spinner("Generating plot..."):
-                        # --- MODIFY THIS CALL to pass the override value ---
+                        # --- Prepare plot-specific arguments ---
+                        plot_specific_args = {}
+                        if plot_type_display == "Metric Share Area Plot":
+                            # Get smoothing value from session state for this plot type
+                            smoothing_val = st.session_state.get(
+                                "data_smoothing_window", 0
+                            )
+                            # Only pass if > 1, as 0 or 1 means no smoothing
+                            if smoothing_val > 1:
+                                plot_specific_args["smoothing_window"] = smoothing_val
+
+                        # Add other plot-specific args here if needed in the future
+
                         fig = build_plot(
                             df=data_for_plot,
                             plotter=plotter,
                             plot_type_display=plot_type_display,
-                            column_mappings={},  # Reset or manage specific mappings if needed
+                            column_mappings={},
                             title=plot_title,
                             subtitle=plot_subtitle,
                             source=plot_source,
                             prefix=y_prefix,
                             suffix=y_suffix,
-                            xaxis_is_date=xaxis_is_date,  # Use the determined flag
-                            date_override=plot_date_override_value,  # Pass the override value
-                            # Pass other styling kwargs if necessary
+                            xaxis_is_date=xaxis_is_date,
+                            date_override=plot_date_override_value,
+                            xaxis_title=x_axis_title_val,
+                            yaxis_title=y_axis_title_val,
+                            **plot_specific_args,  # Pass the specific args
                         )
                         if fig:
                             plot_html = fig.to_html(

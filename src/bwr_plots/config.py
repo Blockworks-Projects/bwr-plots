@@ -78,7 +78,7 @@ DEFAULT_BWR_CONFIG = {
         "font_size": 14.4,
         "orientation": "h",
         "yanchor": "top",
-        "y": -0.08,
+        "y": -0.087,
         "xanchor": "left",
         "x": 0.0,
         "title": "",

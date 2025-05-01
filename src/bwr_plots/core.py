@@ -732,35 +732,35 @@ class BWRPlots:
             "x_tickformat": cfg_axes["x_tickformat"],
             "x_nticks": cfg_axes["x_nticks"],
             "x_range": None,
+            "x_title_text": cfg_axes[
+                "x_title_text"
+            ],  # Add x_title_text to default options
         }
         merged_options = default_opts.copy()
         if axis_options:
             merged_options.update(axis_options)
-        # --- UPDATED LOGIC ---
-        xaxis_type = merged_options.get("x_type", "linear")
-        if not xaxis_is_date and xaxis_type == "date":
+        # --- CORRECTED LOGIC ---
+        if not xaxis_is_date:
+            # If the flag explicitly says it's NOT a date, force category type.
+            # This overrides any inferred type from axis_options.
             xaxis_type = "category"
-            try:
-                from termcolor import colored
-
-                print(
-                    colored(
-                        f"[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'.",
-                        "yellow",
-                    )
-                )
-            except ImportError:
-                print(
-                    "[Warning] _apply_common_axes: xaxis_is_date=False but x_type='date' received. Overriding to 'category'."
-                )
-        # --- MODIFIED LOGIC ---
-        if xaxis_is_date:
-            xaxis_tickformat = merged_options[
-                "x_tickformat"
-            ]  # Use configured date format
+            # Optional debug print:
+            # print("[DEBUG _apply_common_axes] xaxis_is_date=False. Forcing xaxis_type = 'category'.")
         else:
-            xaxis_tickformat = ""  # Use empty string for default numeric formatting
-        # --- End MODIFIED LOGIC ---
+            # If the flag says it IS a date, use the type from options (should be 'date')
+            # or default to 'date' if not specified in options.
+            xaxis_type = merged_options.get("x_type", "date")
+            # Optional debug print:
+            # print(f"[DEBUG _apply_common_axes] xaxis_is_date=True. Using xaxis_type = '{xaxis_type}'.")
+
+        # Ensure tickformat is appropriate for the determined type
+        if xaxis_type == "category":
+            xaxis_tickformat = ""  # Let Plotly handle category labels automatically
+        else:  # Assumed 'date' or potentially 'linear' if upstream failed date conversion
+            xaxis_tickformat = merged_options.get(
+                "x_tickformat", cfg_axes["x_tickformat"]
+            )  # Use configured date/linear format
+        # --- End CORRECTED LOGIC ---
 
         # --- START DEBUG PRINTS (core.py) ---
         # print(f"[DEBUG _apply_common_axes] Received xaxis_is_date: {xaxis_is_date}")
@@ -771,7 +771,8 @@ class BWRPlots:
         fig.update_xaxes(
             type=xaxis_type,
             title=dict(
-                text=cfg_axes["x_title_text"], font=self._get_font_dict("axis_title")
+                text=merged_options.get("x_title_text", cfg_axes["x_title_text"]),
+                font=self._get_font_dict("axis_title"),
             ),
             showline=True,
             linewidth=cfg_axes.get("gridwidth", 2.5),
@@ -989,6 +990,8 @@ class BWRPlots:
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         xaxis_is_date: bool = True,
+        x_axis_title: Optional[str] = None,  # New parameter
+        y_axis_title: Optional[str] = None,  # New parameter
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -1111,6 +1114,11 @@ class BWRPlots:
         local_axis_options = {} if axis_options is None else axis_options.copy()
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
+        if x_axis_title:
+            local_axis_options["x_title_text"] = x_axis_title
+        if y_axis_title:
+            # Assuming the title applies to the primary Y axis
+            local_axis_options["primary_title"] = y_axis_title
 
         max_value_primary = 0
         scaled_primary_data = None
@@ -1330,6 +1338,7 @@ class BWRPlots:
     def metric_share_area_plot(
         self,
         data: pd.DataFrame,
+        smoothing_window: Optional[int] = None,
         title: str = "",
         subtitle: str = "",
         source: str = "",
@@ -1344,6 +1353,8 @@ class BWRPlots:
         suffix: Optional[str] = None,
         plot_area_b_padding: Optional[int] = None,
         xaxis_is_date: bool = True,
+        x_axis_title: Optional[str] = None,  # New parameter
+        y_axis_title: Optional[str] = None,  # New parameter
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -1353,6 +1364,7 @@ class BWRPlots:
 
         Args:
             data: DataFrame with columns as data series for stacking
+            smoothing_window: Integer window size for moving average smoothing (default: None, no smoothing)
             title: Main title text
             subtitle: Subtitle text
             source: Source citation text
@@ -1366,6 +1378,9 @@ class BWRPlots:
             prefix: Y-axis tick prefix
             suffix: Y-axis tick suffix
             plot_area_b_padding: Bottom padding for plot area
+            xaxis_is_date: Whether the x-axis represents dates
+            x_axis_title: Title for the x-axis (optional)
+            y_axis_title: Title for the y-axis (optional)
             save_image: Whether to save as PNG
             save_path: Path to save image (default: current directory)
             open_in_browser: Whether to open the plot in a browser
@@ -1389,35 +1404,69 @@ class BWRPlots:
         )
 
         # --- Data Handling & Preparation ---
-        if isinstance(data, pd.Series):
-            plot_data = pd.DataFrame(data)
-        else:
-            plot_data = data.copy()
+        # START REPLACEMENT BLOCK
+        plot_data_orig = data.copy()  # Keep original for raw values if needed later
+        plot_data = data.copy()
 
-        # Attempt index conversion
+        # Ensure index is datetime/prepared (respecting xaxis_is_date)
         plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
+        plot_data = self._prepare_xaxis_data(
+            plot_data, xaxis_is_date
+        )  # Prepare index type
 
-        # --- >>> START INSERTION for metric_share_area_plot <<< ---
-        # Prepare index type based on xaxis_is_date flag BEFORE normalization/trace function
-        print("[DEBUG metric_share_area_plot] Calling _prepare_xaxis_data...")
-        plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
-        # --- >>> END INSERTION for metric_share_area_plot <<< ---
+        # --- NEW STEP 1: Apply Smoothing to RAW data (if requested) ---
+        numeric_cols = plot_data.select_dtypes(include=np.number).columns
+        smoothed_data = plot_data.copy()  # Start with original or prepared index data
 
-        # Normalize data rows to sum to 1 (100%)
-        numeric_data = plot_data.select_dtypes(include=np.number)
-        normalized_data = plot_data.copy()
+        if (
+            smoothing_window is not None
+            and smoothing_window > 1
+            and not plot_data.empty
+            and len(numeric_cols) > 0
+        ):
+            print(
+                f"[DEBUG metric_share_area] Applying smoothing with window {smoothing_window}"
+            )
+            try:
+                # Apply rolling mean only to numeric columns
+                smoothed_values = (
+                    plot_data[numeric_cols]
+                    .rolling(window=smoothing_window, min_periods=1)
+                    .mean()
+                )
 
-        # Only normalize rows with sum > 0 to avoid division by zero
-        row_sums = numeric_data.sum(axis=1)
-        rows_to_normalize = row_sums > 0
+                # Handle NaNs introduced by rolling (fill with 0 before normalizing)
+                smoothed_values = smoothed_values.fillna(0)
 
-        if rows_to_normalize.any():
-            for i, (idx, normalize) in enumerate(rows_to_normalize.items()):
-                if normalize:
-                    row_sum = row_sums[idx]
-                    normalized_data.loc[idx, numeric_data.columns] = (
-                        numeric_data.loc[idx] / row_sum
-                    )
+                # Update the numeric columns in our working dataframe
+                smoothed_data[numeric_cols] = smoothed_values
+
+            except Exception as e:
+                print(f"Warning: Failed to apply smoothing in metric_share_area: {e}")
+                # Continue with unsmoothed data if smoothing fails
+                smoothed_data = plot_data
+
+        # --- NEW STEP 2: Normalize AFTER smoothing ---
+        data_to_normalize = smoothed_data[numeric_cols]  # Use potentially smoothed data
+
+        if data_to_normalize.empty:
+            print(
+                "Warning: No numeric data found after potential smoothing to calculate shares."
+            )
+            return go.Figure()  # Return empty figure
+
+        row_sums = data_to_normalize.sum(axis=1)
+        # Avoid division by zero - replace 0 sums with 1 to prevent errors/Inf.
+        # Shares for rows that sum to 0 will become 0.
+        row_sums_safe = row_sums.replace(0, 1)
+
+        # Perform normalization
+        normalized_values = data_to_normalize.div(row_sums_safe, axis=0)
+
+        # Create the final DataFrame for filtering/plotting, starting with normalized values
+        # and preserving the original index.
+        normalized_data = pd.DataFrame(normalized_values, index=smoothed_data.index)
+        # END REPLACEMENT BLOCK
 
         # --- Determine Effective Date ---
         effective_date = date
@@ -1447,39 +1496,23 @@ class BWRPlots:
         local_axis_options = {} if axis_options is None else axis_options.copy()
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
-        # Fix suffix and tickformat to avoid double % symbols
-        if "primary_tickformat" not in local_axis_options:
-            local_axis_options["primary_tickformat"] = cfg_plot.get(
-                "y_tickformat", ".0%"
-            )
-        if suffix is not None:
-            local_axis_options["primary_suffix"] = suffix
-        else:
-            local_axis_options["primary_suffix"] = (
-                ""  # Empty suffix as format already has %
-            )
-        # Set y-axis range to 0-1 by default
-        if "primary_range" not in local_axis_options:
-            local_axis_options["primary_range"] = cfg_plot.get("y_range", [0, 1])
-        # --- Calculate y-axis grid params for bottom gridline ---
-        axis_min_calculated = None
-        yaxis_params = None
-        if not normalized_data.empty:
-            y_values_for_range = normalized_data.select_dtypes(
-                include=np.number
-            ).values.flatten()
-            if y_values_for_range.size > 0:
-                yaxis_params = calculate_yaxis_grid_params(
-                    y_data=y_values_for_range,
-                    padding=0.0,  # No extra padding for share plots
-                    num_gridlines=5,
-                )
-                axis_min_calculated = yaxis_params["tick0"]
-                # --- Add yaxis_params to local_axis_options ---
-                local_axis_options["primary_range"] = yaxis_params["range"]
-                local_axis_options["primary_tick0"] = yaxis_params["tick0"]
-                local_axis_options["primary_dtick"] = yaxis_params["dtick"]
-                local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+        if x_axis_title:
+            local_axis_options["x_title_text"] = x_axis_title
+        if y_axis_title:
+            # Assuming the title applies to the primary Y axis
+            local_axis_options["primary_title"] = y_axis_title
+
+        # --- >>> START: FORCE Y-AXIS FOR METRIC SHARE AREA <<< ---
+        print(
+            "[DEBUG metric_share_area] Forcing Y-axis to [0, 1] with percentage format."
+        )
+        local_axis_options["primary_range"] = [0, 1]
+        local_axis_options["primary_tickformat"] = ".0%"  # Standard percentage format
+        local_axis_options["primary_suffix"] = ""  # Ensure suffix is empty
+        local_axis_options["primary_tick0"] = 0.0  # Start ticks at 0
+        local_axis_options["primary_dtick"] = 0.2  # Ticks every 20%
+        local_axis_options["primary_tickmode"] = "linear"
+        # --- >>> END: FORCE Y-AXIS <<< ---
 
         # --- Ensure first and last x-tick are always shown ---
         if not normalized_data.empty and isinstance(
@@ -1550,7 +1583,7 @@ class BWRPlots:
         self._apply_common_axes(
             fig,
             local_axis_options,
-            axis_min_calculated=axis_min_calculated,
+            axis_min_calculated=0,  # Force to 0 since we're using fixed range
             xaxis_is_date=xaxis_is_date,
         )
 
@@ -1598,6 +1631,9 @@ class BWRPlots:
         suffix: Optional[str] = None,
         axis_options: Optional[Dict] = None,
         plot_area_b_padding: Optional[int] = None,
+        y_axis_title: Optional[
+            str
+        ] = None,  # New parameter - X is always categorical for simple bar
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -1701,6 +1737,9 @@ class BWRPlots:
             local_axis_options = {} if axis_options is None else axis_options.copy()
             if prefix is not None:
                 local_axis_options["primary_prefix"] = prefix
+            # X-axis title not typically used for simple bar, Y-axis title is relevant
+            if y_axis_title:
+                local_axis_options["primary_title"] = y_axis_title
 
             max_value = 0
             if isinstance(plot_data, pd.DataFrame):
@@ -1881,6 +1920,10 @@ class BWRPlots:
         prefix: Optional[str] = None,
         suffix: Optional[str] = None,
         plot_area_b_padding: Optional[int] = None,
+        x_axis_title: Optional[str] = None,  # New parameter
+        y_axis_title: Optional[
+            str
+        ] = None,  # New parameter - Title for the category axis
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -2031,6 +2074,13 @@ class BWRPlots:
             axis_min_calculated = 0
 
         xaxis_params["ticksuffix"] = final_x_suffix
+        # --- BEGIN ADDITION ---
+        # Add X-axis title from parameter if provided
+        if x_axis_title:
+            xaxis_params["title_text"] = x_axis_title
+        # Y-axis title (categories)
+        yaxis_title_text = y_axis_title if y_axis_title else ""
+        # --- END ADDITION ---
         xaxis_params["tickprefix"] = final_x_prefix
         # --- END: Scaling and Axis Calculation ---
 
@@ -2066,7 +2116,10 @@ class BWRPlots:
         # --- START: Apply Specific Axes Configuration for Horizontal Bar ---
         # Configure X-Axis (Values) using calculated xaxis_params
         fig.update_xaxes(
-            title=dict(text="", font=self._get_font_dict("axis_title")),
+            title=dict(
+                text=xaxis_params.get("title_text", ""),
+                font=self._get_font_dict("axis_title"),
+            ),
             tickprefix=xaxis_params.get("tickprefix", ""),
             ticksuffix=xaxis_params.get("ticksuffix", ""),
             tickfont=self._get_font_dict("tick"),
@@ -2083,11 +2136,10 @@ class BWRPlots:
 
         # Configure Y-Axis (Categories)
         fig.update_yaxes(
-            title=dict(text="", font=self._get_font_dict("axis_title")),
+            title=dict(text=yaxis_title_text, font=self._get_font_dict("axis_title")),
             type="category",
             showgrid=False,
             showline=False,
-            showticklabels=True,
             tickfont=self._get_font_dict("tick"),
             automargin=True,
             categoryorder="array",
@@ -2095,6 +2147,8 @@ class BWRPlots:
                 ascending=current_sort_ascending
             ).index.tolist(),
             ticks="",
+            zeroline=False,
+            showticklabels=True,
             fixedrange=True,
         )
         # --- END: Apply Specific Axes Configuration ---
@@ -2137,6 +2191,8 @@ class BWRPlots:
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         xaxis_is_date: bool = True,
+        x_axis_title: Optional[str] = None,  # New parameter
+        y_axis_title: Optional[str] = None,  # New parameter
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -2256,6 +2312,11 @@ class BWRPlots:
         local_axis_options = {} if axis_options is None else axis_options.copy()
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
+        if x_axis_title:
+            local_axis_options["x_title_text"] = x_axis_title
+        if y_axis_title:
+            # Assuming the title applies to the primary Y axis
+            local_axis_options["primary_title"] = y_axis_title
 
         axis_min_calculated = None
         yaxis_params = None
@@ -2430,6 +2491,7 @@ class BWRPlots:
         axis_options: Optional[Dict[str, Any]] = None,
         plot_area_b_padding: Optional[int] = None,
         xaxis_is_date: bool = True,
+        x_axis_title: Optional[str] = None,  # New parameter
         save_image: bool = False,
         save_path: Optional[str] = None,
         open_in_browser: bool = False,
@@ -2546,9 +2608,10 @@ class BWRPlots:
         local_axis_options = {} if axis_options is None else axis_options.copy()
         if prefix is not None:
             local_axis_options["primary_prefix"] = prefix
-
-        # Set Y-axis title if provided
-        if y_axis_title is not None:
+        if x_axis_title:
+            local_axis_options["x_title_text"] = x_axis_title
+        if y_axis_title:
+            # Assuming the title applies to the primary Y axis
             local_axis_options["primary_title"] = y_axis_title
 
         # --- NEW STACKED BAR SCALING LOGIC ---

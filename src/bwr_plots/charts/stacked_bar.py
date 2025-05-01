@@ -42,25 +42,48 @@ def _add_stacked_bar_traces(
 
     # Set up color palette
     default_palette = cfg_colors["default_palette"]
-    color_palette = iter(default_palette)
 
-    # Determine colors for each series
+    # --- NEW ASSIGNMENT LOGIC ---
+    num_colors_needed = len(numeric_cols)  # How many distinct colors we need
+
+    # Ensure palette is long enough, repeat if necessary
+    if not default_palette:  # Handle empty palette case
+        default_palette = ["#1f77b4"]  # Default fallback color
+    extended_palette = (
+        default_palette * (num_colors_needed // len(default_palette) + 1)
+    )[:num_colors_needed]
+
+    # Create a mapping from sorted column (priority) to color index.
+    # Highest priority (sorted_cols[0]) gets the *last* color index.
+    # Lowest priority gets the *first* color index (0).
+    priority_to_color_index = {
+        col: (num_colors_needed - 1 - i)
+        for i, col in enumerate(sorted_cols)
+        if i < num_colors_needed  # Safety check
+    }
+
     series_colors = {}
-    if colors:
-        # Use provided colors where available, else use defaults
-        for col in sorted_cols:
-            if col in colors:
-                series_colors[col] = colors[col]
-            else:
-                series_colors[col] = next(color_palette)
-    else:
-        # Use default color palette
-        for col in sorted_cols:
-            series_colors[col] = next(color_palette)
+    # Iterate through all columns that will actually be plotted
+    for col in numeric_cols:
+        if colors and col in colors:
+            # Use provided override color first
+            series_colors[col] = colors[col]
+        elif col in priority_to_color_index:
+            # Use the color determined by reversed priority mapping
+            color_idx = priority_to_color_index[col]
+            series_colors[col] = extended_palette[color_idx]
+        else:
+            # Fallback for columns not in sorted_cols (should be rare)
+            # Assign a default color (e.g., the first palette color) or handle as error
+            print(
+                f"Warning: Column '{col}' not found in priority mapping. Using fallback color."
+            )
+            series_colors[col] = extended_palette[0]
+    # --- END NEW ASSIGNMENT LOGIC ---
 
     # Add traces for each column in order
     for i, col in enumerate(reversed(numeric_cols)):
-        trace_color = series_colors[col]
+        trace_color = series_colors.get(col, extended_palette[0])
 
         fig.add_trace(
             go.Bar(

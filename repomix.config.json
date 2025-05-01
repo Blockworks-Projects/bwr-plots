@@ -1,10 +1,11 @@
 {
   "output": {
-    "style": "markdown",
-    "filePath": ".repomix/bwr-plots-codebase.txt",
+    "style": "xml",
+    "filePath": ".repomix/_bwr-plots-codebase.xml",
     "removeComments": true,
     "showLineNumbers": true,
-    "topFilesLength": 10
+    "topFilesLength": 10,
+    "compress": false
   },
   "ignore": {
     "customPatterns": [

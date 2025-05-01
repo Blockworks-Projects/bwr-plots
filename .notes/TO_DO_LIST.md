@@ -1,4 +1,11 @@
 # To-Do List
-- Add Table Feature
-- Light Mode
-- Multi-axis for Scatterplot
+> Primary
+ - 
+
+> Backlog
+ - 
+ - Ability to drop/rename columns after pivoting
+ - Add Table Feature
+ - Multi-axis for Scatterplot
+ - Light Mode
+
