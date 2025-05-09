@@ -7,11 +7,12 @@ A Python library designed for creating Blockworks Research branded data visualiz
 -   **Consistent Styling:** Automatically applies Blockworks Research branding (colors, fonts, layout) to visualizations.
 -   **Multiple Chart Types (via `BWRPlots` class):**
     -   Scatter/Line Plots (`scatter_plot`): Single or dual Y-axis.
-    -   Metric Share Area Plots (`metric_share_area_plot`): Normalized stacked area for showing percentage shares over time.
+    -   Metric Share Area Plots (`metric_share_area_plot`): Normalized stacked area for showing percentage shares over time. Supports data smoothing.
     -   Bar Charts (`bar_chart`): Simple vertical bars for categorical data.
-    -   Grouped Bar Charts (`multi_bar`): Compares values across categories for multiple series.
-    -   Stacked Bar Charts (`stacked_bar_chart`): Shows parts of a whole across categories or time.
-    -   Horizontal Bar Charts (`horizontal_bar`): Useful for ranked categories, supports positive/negative values.
+    -   Grouped Bar Charts (`multi_bar`): Compares values across categories for multiple series. Supports `tick_frequency` for X-axis labels.
+    -   Stacked Bar Charts (`stacked_bar_chart`): Shows parts of a whole across categories or time. Supports `sort_descending` for legend/stack order.
+    -   Horizontal Bar Charts (`horizontal_bar`): Useful for ranked categories, supports positive/negative values and `sort_ascending`.
+    -   Plotly Tables (`table_plot`): Renders data as a static, styled table using Plotly's native table trace.
 -   **Interactive Tables (via `render_aggrid_table` function):**
     -   Leverages `streamlit-aggrid` to display Pandas DataFrames in Streamlit apps.
     -   Provides sorting, filtering, pagination, and customization options.
@@ -19,14 +20,16 @@ A Python library designed for creating Blockworks Research branded data visualiz
 -   **Data Handling:**
     -   Automatic Y-axis value scaling and suffixing (e.g., K, M, B).
     -   Intelligent axis range calculation.
+    -   Key parameter `xaxis_is_date` for time-series vs. categorical X-axis behavior in relevant plots.
     -   Utility function `round_and_align_dates` for time-series data preparation.
 -   **Customization:**
     -   Override default styles by passing a configuration dictionary during `BWRPlots` initialization.
-    -   Control plot appearance via function parameters (titles, sources, prefixes, suffixes, etc.).
+    -   Control plot appearance via function parameters (titles, sources, prefixes, suffixes, `x_axis_title`, `y_axis_title`, etc.).
+    -   Configurable background image for plots (via `general.background_image_path` and `plot_specific.<type>.use_background_image` in config).
 -   **Output Options:**
     -   Save plots as interactive HTML files (`save_image=True`).
     -   Optionally open plots directly in the browser (`open_in_browser=True`).
--   **Watermark:** Easily add a configurable SVG watermark.
+-   **Watermark:** Easily add a configurable SVG watermark (via `watermark` section in config).
 
 ## Installation
 
@@ -78,11 +81,12 @@ fig_scatter = plotter.scatter_plot(
 # fig_scatter.show() # Display interactively if needed
 
 # Other plot types:
-# fig_area = plotter.metric_share_area_plot(data=df_shares, ...)
+# fig_area = plotter.metric_share_area_plot(data=df_shares, smoothing_window=7, ...)
 # fig_bar = plotter.bar_chart(data=series_or_df, ...)
 # fig_hbar = plotter.horizontal_bar(data=df_ranked, y_column='Category', x_column='Value', ...)
-# fig_multi = plotter.multi_bar(data=df_monthly, ...)
-# fig_stacked = plotter.stacked_bar_chart(data=df_monthly_shares, ...)
+# fig_multi = plotter.multi_bar(data=df_monthly, tick_frequency=2, ...)
+# fig_stacked = plotter.stacked_bar_chart(data=df_monthly_shares, sort_descending=True, ...)
+# fig_plotly_table = plotter.table_plot(data=df_simple_table, ...)
 ```
 
 ### Creating Interactive Tables with `render_aggrid_table` (Streamlit Required)
@@ -131,8 +135,9 @@ grid_response = render_aggrid_table(
 -   **Metric Share Area:** `plotter.metric_share_area_plot(data, ...)`
 -   **Bar Chart:** `plotter.bar_chart(data, ...)`
 -   **Horizontal Bar:** `plotter.horizontal_bar(data, y_column, x_column, ...)`
--   **Grouped Bar:** `plotter.multi_bar(data, ...)`
--   **Stacked Bar:** `plotter.stacked_bar_chart(data, ...)`
+-   **Grouped Bar (Time Series / Categorical):** `plotter.multi_bar(data, ...)`
+-   **Stacked Bar (Time Series / Categorical):** `plotter.stacked_bar_chart(data, ...)`
+-   **Plotly Table:** `plotter.table_plot(data, ...)`
 -   **Interactive Table (Streamlit):** `render_aggrid_table(df, ...)` (Import separately)
 
 ## Customization
@@ -154,14 +159,18 @@ custom_config = {
     "watermark": {
         "default_path": "assets/my_logo.svg", # Path relative to project root
         "default_use": True,
-        "chart_opacity": 0.8
+        "chart_opacity": 0.8 # Opacity for chart watermark
+    },
+    "general": {
+        "background_image_path": "brand-assets/my_background.png", # Path relative to project root
     },
     "layout": {
         "margin_l": 100 # Adjust left margin
     },
     "plot_specific": {
         "scatter": {
-            "line_width": 3.0 # Thinner lines for scatter plots
+            "line_width": 3.0, # Thinner lines for scatter plots
+            "use_background_image": True # Enable background for scatter plots
         }
     }
 }
@@ -173,14 +182,16 @@ plotter = BWRPlots(config=custom_config)
 ## Important Notes
 
 -   **Watermark Path:** The default watermark path (`brand-assets/bwr_white.svg`) is relative to the project root where the script is run. Ensure the asset is accessible or update the `watermark.default_path` in your custom config.
+-   **Background Image Path:** The background image path (e.g., `general.background_image_path`) is also relative to the project root. Ensure the asset is accessible and the `plot_specific.<type>.use_background_image` flag is `True` for the desired plot type.
 -   **Output Directory:** By default, plots saved via `save_image=True` are placed in an `./output/` directory created in the current working directory. Use the `save_path` argument to specify a different location.
 -   **Fonts:** For best results, install the "Maison Neue" and "Inter" font families on the system where plots are generated or viewed. The library specifies fallbacks, but appearance may vary.
 -   **`open_in_browser`:** Set to `True` in plotting methods to automatically open the generated HTML file in your default web browser.
 -   **`save_image`:** Set to `True` to save the plot as a standalone `.html` file.
+-   **`xaxis_is_date`:** For plots like `scatter_plot`, `metric_share_area_plot`, `multi_bar`, and `stacked_bar_chart`, this boolean parameter (default `True`) determines if the X-axis should be treated as datetime objects or categorical. Set to `False` for non-temporal categorical X-axes.
 
 ## Examples
 
-Refer to the Python scripts in the `examples/` directory for detailed usage patterns for each visualization type. You can run them individually or use `examples/run_all_examples.py`.
+Refer to the Python scripts in the `examples/` directory for detailed usage patterns for each visualization type. You can run them individually or use `examples/run_all_examples.py`. For a comprehensive interactive demonstration, run the Streamlit application: `streamlit run app.py`.
 
 ## Requirements
 
@@ -196,4 +207,3 @@ Refer to the Python scripts in the `examples/` directory for detailed usage patt
 ## License
 
 Copyright (c) Blockworks Research
-```

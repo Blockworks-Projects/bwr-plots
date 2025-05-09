@@ -1631,6 +1631,7 @@ class BWRPlots:
         suffix: Optional[str] = None,
         axis_options: Optional[Dict] = None,
         plot_area_b_padding: Optional[int] = None,
+        x_axis_title: Optional[str] = None,  # Added parameter
         y_axis_title: Optional[
             str
         ] = None,  # New parameter - X is always categorical for simple bar
@@ -1656,6 +1657,8 @@ class BWRPlots:
             prefix: Y-axis tick prefix
             suffix: Y-axis tick suffix
             plot_area_b_padding: Bottom padding for plot area
+            x_axis_title: Title for the x-axis (categorical axis)
+            y_axis_title: Title for the y-axis (value axis)
             save_image: Whether to save as PNG
             save_path: Path to save image (default: current directory)
             open_in_browser: Whether to open the plot in a browser
@@ -1702,6 +1705,10 @@ class BWRPlots:
             )
             scaled_data = pd.DataFrame()  # Empty data for axis calc
             local_axis_options = {} if axis_options is None else axis_options.copy()
+            if x_axis_title:
+                local_axis_options["x_title_text"] = x_axis_title
+            if y_axis_title:
+                local_axis_options["primary_title"] = y_axis_title
             axis_min_calculated = 0  # Default for empty
         else:
             # Process the data
@@ -1738,6 +1745,8 @@ class BWRPlots:
             if prefix is not None:
                 local_axis_options["primary_prefix"] = prefix
             # X-axis title not typically used for simple bar, Y-axis title is relevant
+            if x_axis_title:
+                local_axis_options["x_title_text"] = x_axis_title
             if y_axis_title:
                 local_axis_options["primary_title"] = y_axis_title
 
