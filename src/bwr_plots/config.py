@@ -47,9 +47,13 @@ DEFAULT_BWR_CONFIG = {
         "table_cell": {"size": 20, "color": "#ededed"},
     },
     "watermark": {
-        "default_path": "brand-assets/bwr_white.svg",
+        "available_watermarks": {
+            "Blockworks Research": "brand-assets/bwr_white.svg",
+            "Blockworks Advisory": "brand-assets/bwa_white.svg",
+        },
+        "selected_watermark_key": "Blockworks Research",
         "default_use": True,
-        "chart_opacity": 1,
+        "chart_opacity": 1.0,
         "chart_layer": "above",
         "chart_x": 1.012,
         "chart_y": 1.275,
@@ -60,9 +64,9 @@ DEFAULT_BWR_CONFIG = {
     "layout": {
         "margin_l": 120,
         "margin_r": 70,
-        "margin_t_base": 108,
-        "margin_b_min": 24,
-        "plot_area_b_padding": -36,
+        "margin_t_base": 108,  # 108
+        "margin_b_min": 0,  # 24
+        "plot_area_b_padding": 0,  # -36
         "title_x": 0.035,
         "title_padding": 100,
         "hovermode": "x unified",
@@ -78,7 +82,7 @@ DEFAULT_BWR_CONFIG = {
         "font_size": 14.4,
         "orientation": "h",
         "yanchor": "top",
-        "y": -0.087,
+        "y": -0.138,
         "xanchor": "left",
         "x": 0.0,
         "title": "",

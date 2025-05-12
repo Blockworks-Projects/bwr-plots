@@ -24,6 +24,7 @@ TABLE_AGGRID_ON = 0
 try:
     # Import BWRPlots for charts
     from bwr_plots import BWRPlots
+    from bwr_plots.config import DEFAULT_BWR_CONFIG
 
     # Import the new AG-Grid renderer and helper
     from bwr_plots.aggrid_table import render_aggrid_table, dataframe_to_csv_bytes
@@ -38,6 +39,7 @@ except ImportError:
         sys.path.insert(0, str(project_root))
         try:
             from src.bwr_plots import BWRPlots
+            from src.bwr_plots.config import DEFAULT_BWR_CONFIG
             from src.bwr_plots.aggrid_table import (
                 render_aggrid_table,
                 dataframe_to_csv_bytes,
@@ -703,6 +705,48 @@ with sidebar_col:
         y_prefix = st.text_input("Y-axis prefix", "", key="y_prefix")
         y_suffix = st.text_input("Y-axis suffix", "", key="y_suffix")
 
+        # --- BEGIN ADDITION: Watermark Selection UI ---
+        st.divider()
+        st.subheader("Branding Options")
+
+        # Get watermark options from default config
+        default_watermark_options = list(
+            DEFAULT_BWR_CONFIG["watermark"]["available_watermarks"].keys()
+        )
+        default_selected_key = DEFAULT_BWR_CONFIG["watermark"]["selected_watermark_key"]
+
+        # Ensure default_selected_key is valid, otherwise default to first option
+        try:
+            default_index = default_watermark_options.index(default_selected_key)
+        except ValueError:
+            default_index = 0
+            if default_watermark_options:  # Check if options exist
+                print(
+                    f"Warning: Default watermark key '{default_selected_key}' not in available options. Defaulting to '{default_watermark_options[0]}'."
+                )
+            else:
+                print("Warning: No watermark options available.")
+
+        # Only show selectbox if options are available
+        if default_watermark_options:
+            st.selectbox(
+                "Select Watermark SVG",
+                options=default_watermark_options,
+                index=default_index,
+                key="watermark_svg_select",
+                help="Choose the SVG image to use as the plot watermark.",
+            )
+        else:
+            st.caption("No watermark options configured.")
+
+        # Optional: Add a checkbox to toggle watermark usage
+        st.checkbox(
+            "Use Watermark",
+            value=DEFAULT_BWR_CONFIG["watermark"].get("default_use", True),
+            key="use_watermark_toggle",
+        )
+        # --- END ADDITION: Watermark Selection UI ---
+
         # --- BEGIN ADDITION ---
         # Conditionally show axis title inputs if X-axis is not a date
         xaxis_titles_visible = not st.session_state.get("data_xaxis_is_date", True)
@@ -1098,6 +1142,39 @@ with main_col:
 
                 is_plotly_chart = plot_type_display != "Table (AG-Grid)"
                 is_aggrid_table = plot_type_display == "Table (AG-Grid)"
+
+                # --- BEGIN ADDITION: Create custom config with watermark settings ---
+                # Build custom config for BWRPlots
+                current_custom_config = {"watermark": {}}
+
+                # Watermark selection from UI
+                watermark_options = list(
+                    DEFAULT_BWR_CONFIG["watermark"]["available_watermarks"].keys()
+                )
+                if watermark_options:  # Check if selectbox was created
+                    selected_watermark_label = st.session_state.get(
+                        "watermark_svg_select",
+                        (
+                            DEFAULT_BWR_CONFIG["watermark"]["selected_watermark_key"]
+                            if watermark_options
+                            else None
+                        ),
+                    )
+                    if (
+                        selected_watermark_label
+                    ):  # Ensure a selection was made/default exists
+                        current_custom_config["watermark"][
+                            "selected_watermark_key"
+                        ] = selected_watermark_label
+
+                # Watermark usage toggle from UI
+                current_custom_config["watermark"]["default_use"] = (
+                    st.session_state.get("use_watermark_toggle", True)
+                )
+
+                # Initialize BWRPlots with the custom config
+                plotter = BWRPlots(config=current_custom_config)
+                # --- END ADDITION: Create custom config with watermark settings ---
 
                 if is_aggrid_table:
                     if not isinstance(data_for_plot, pd.DataFrame):

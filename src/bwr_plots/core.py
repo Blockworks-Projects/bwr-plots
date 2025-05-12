@@ -292,18 +292,46 @@ class BWRPlots:
         Load SVG watermark based on current config, looking relative to package root.
 
         Loads the SVG watermark as a base64-encoded data URI if enabled in config.
-        Handles missing files and path resolution robustly.
+        Uses the selected_watermark_key from config to determine which watermark to load.
+        Handles missing files, invalid keys, and path resolution robustly.
         Sets self.watermark to the encoded string or None if not found/disabled.
         """
-        use_watermark = self.config["watermark"].get("default_use", True)
-        svg_rel_path = self.config["watermark"].get("default_path", "")
+        cfg_watermark = self.config.get("watermark", {})
+        use_watermark = cfg_watermark.get("default_use", True)
 
-        if not use_watermark or not svg_rel_path:
+        if not use_watermark:
             self.watermark = None
-            if use_watermark and not svg_rel_path:
-                print(
-                    "Warning: Watermark use enabled, but default_path is empty in config."
-                )
+            return
+
+        selected_key = cfg_watermark.get("selected_watermark_key")
+        available_watermarks = cfg_watermark.get("available_watermarks", {})
+
+        if (
+            not selected_key
+            or not available_watermarks
+            or selected_key not in available_watermarks
+        ):
+            print(
+                f"Warning: Watermark key '{selected_key}' not found or 'available_watermarks' misconfigured. Watermark disabled."
+            )
+            self.watermark = None
+            return
+
+        svg_rel_path = available_watermarks.get(selected_key)
+
+        # Handle case where a key might map to None (e.g., for "No Watermark" option)
+        if svg_rel_path is None:
+            print(
+                f"Info: Selected watermark key '{selected_key}' maps to no path. Watermark disabled for this selection."
+            )
+            self.watermark = None
+            return
+
+        if not svg_rel_path:  # Handles empty string path
+            print(
+                f"Warning: No path defined for watermark key '{selected_key}'. Watermark disabled."
+            )
+            self.watermark = None
             return
 
         try:
@@ -311,7 +339,7 @@ class BWRPlots:
             project_root = Path(__file__).resolve().parent.parent.parent
             svg_abs_path = project_root / svg_rel_path
 
-            if svg_abs_path.exists():
+            if svg_abs_path.exists() and svg_abs_path.is_file():
                 with open(svg_abs_path, "r", encoding="utf-8") as file:
                     svg_content = file.read()
                 self.watermark = "data:image/svg+xml;base64," + base64.b64encode(
@@ -319,18 +347,18 @@ class BWRPlots:
                 ).decode("utf-8")
             else:
                 print(
-                    f"Warning: Watermark file not found at resolved path: {svg_abs_path}"
+                    f"Warning: Watermark file not found at resolved path: {svg_abs_path}. Watermark disabled."
                 )
                 self.watermark = None
 
         except FileNotFoundError:
             print(
-                f"Warning: Watermark file specified but not found at path: {svg_abs_path}"
+                f"Warning: Watermark file specified but not found at path: {svg_abs_path}. Watermark disabled."
             )
             self.watermark = None
         except Exception as e:
             print(
-                f"Warning: Failed to load watermark from {svg_rel_path} (resolved: {svg_abs_path}): {e}"
+                f"Warning: Failed to load watermark from {svg_rel_path} (resolved: {svg_abs_path}): {e}. Watermark disabled."
             )
             self.watermark = None
 
