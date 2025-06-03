@@ -18,8 +18,18 @@ dist/
 build/
 *.egg-info/
 
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# React
+node_modules/
+public/build
+
 # MINE
 .cursor
 .repomix
 bgs
 .devcontainer
+data/
