@@ -1,0 +1,11 @@
+{
+  "session_id": "session_1748983923_8586",
+  "plot_type": "line",
+  "configuration": {
+    "x_column": "DATE",
+    "y_column": "APY",
+    "plot_title": "Debug Test Plot",
+    "plot_type": "line"
+  },
+  "data_processing": {}
+} 

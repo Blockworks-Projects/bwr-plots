@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "PYTHON_VERSION": "3.10"
+    }
+  }
+} 
