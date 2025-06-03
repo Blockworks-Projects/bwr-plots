@@ -48,6 +48,10 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 from api.routes import data
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
 
+# Import and include plot routes
+from api.routes import plots
+app.include_router(plots.router, prefix="/api/v1", tags=["plots"])
+
 # Root endpoint
 @app.get("/")
 async def root():
