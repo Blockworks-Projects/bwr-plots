@@ -86,7 +86,7 @@ export function Sidebar({
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
       case 'current':
-        return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200';
+        return 'bg-zinc-100 text-zinc-800 border-zinc-200 hover:bg-zinc-200';
       case 'upcoming':
         return 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100';
       default:
@@ -99,7 +99,7 @@ export function Sidebar({
       case 'completed':
         return 'text-green-600';
       case 'current':
-        return 'text-blue-600';
+        return 'text-zinc-600';
       case 'upcoming':
         return 'text-gray-400';
       default:

@@ -59,7 +59,7 @@ export function PlotDisplay({
       return (
         <div className="flex flex-col items-center justify-center py-16">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">Generating plot...</p>
+          <p className="mt-4 text-gray-400">Generating plot...</p>
         </div>
       );
     }
@@ -70,7 +70,7 @@ export function PlotDisplay({
           <div className="text-red-600 mb-2">
             ⚠️ Plot Generation Failed
           </div>
-          <div className="text-sm text-gray-600 text-center max-w-md mb-4">
+          <div className="text-sm text-gray-400 text-center max-w-md mb-4">
             {error}
           </div>
           {onRegenerateClick && (
@@ -87,7 +87,7 @@ export function PlotDisplay({
 
     if (!plotData && !plotHtml) {
       return (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <div className="text-4xl mb-4">📊</div>
           <div className="text-lg font-medium">No Plot Data</div>
           <div className="text-sm">Configure and generate a plot to see it here</div>
@@ -98,10 +98,11 @@ export function PlotDisplay({
     // Render HTML plot if available
     if (plotHtml) {
       return (
-        <div 
+        <iframe
+          srcDoc={plotHtml}
           className="w-full"
-          dangerouslySetInnerHTML={{ __html: plotHtml }}
-          style={{ minHeight: plotSize.height }}
+          style={{ height: plotSize.height, border: 'none' }}
+          title="Plot Display"
         />
       );
     }
@@ -112,11 +113,11 @@ export function PlotDisplay({
         <div className="flex flex-col items-center justify-center py-16">
           <div className="text-4xl mb-4">📊</div>
           <div className="text-lg font-medium">Plot Data Available</div>
-          <div className="text-sm text-gray-600 text-center max-w-md mb-4">
+          <div className="text-sm text-gray-400 text-center max-w-md mb-4">
             Plot data has been generated. The full interactive plot will be available once the HTML rendering is complete.
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mt-4 text-sm">
-            <pre className="text-gray-700 whitespace-pre-wrap">
+          <div className="bg-gray-800 rounded-lg p-4 mt-4 text-sm">
+            <pre className="text-gray-300 whitespace-pre-wrap">
               {JSON.stringify(plotData, null, 2).slice(0, 200)}
               {JSON.stringify(plotData, null, 2).length > 200 && '...'}
             </pre>
@@ -140,13 +141,13 @@ export function PlotDisplay({
       <div className="p-6">
         {/* Header with Export Controls */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-100">
             Plot Preview
           </h3>
           
           {(plotData || plotHtml) && onExport && (
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600 mr-2">Export as:</span>
+              <span className="text-sm text-gray-400 mr-2">Export as:</span>
               {exportFormats.map((format) => (
                 <Button
                   key={format.value}
@@ -165,13 +166,13 @@ export function PlotDisplay({
         </div>
 
         {/* Plot Content */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           {renderPlotContent()}
         </div>
 
         {/* Plot Information */}
         {(plotData || plotHtml) && !isLoading && !error && (
-          <div className="mt-4 text-xs text-gray-500 flex items-center justify-between">
+          <div className="mt-4 text-xs text-gray-400 flex items-center justify-between">
             <div>
               Display size: {plotSize.width} × {plotSize.height}px
             </div>

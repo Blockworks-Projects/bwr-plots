@@ -1,29 +1,40 @@
-[project]
+[tool.poetry]
 name = "bwr-plots"
 version = "0.1.0"
 description = "Blockworks Research Plotting Library"
-authors = [
-    {name = "Daniel", email = "daniel.shapiro@blockworks.co"}
-]
+authors = ["Daniel <daniel.shapiro@blockworks.co>"]
 readme = "README.md"
-# Change this line to target Python 3.12 and compatible versions
-requires-python = "^3.10"
-dependencies = [
-    "pandas>=2.0.0",
-    "plotly>=5.10.0",
-    "numpy>=1.20.0",
-    "termcolor>=1.1.0",
-    "streamlit>=1.4.1,<2.0.0",
-    "openpyxl>=3.1.5,<4.0.0",
-    "streamlit-aggrid==0.3.4.post3"
+packages = [
+    {include = "bwr_plots", from = "src"},
+    {include = "backend"}
 ]
 
-[tool.poetry]
-packages = [{include = "bwr_plots", from = "src"}]
+[tool.poetry.dependencies]
+python = "^3.10"
+# Data processing dependencies
+pandas = ">=2.0.0"
+plotly = ">=5.10.0"
+numpy = ">=1.20.0"
+openpyxl = ">=3.1.5,<4.0.0"
+# Streamlit dependencies
+termcolor = ">=1.1.0"
+streamlit = ">=1.4.1,<2.0.0"
+streamlit-aggrid = "==0.3.4.post3"
+# FastAPI backend dependencies
+fastapi = "==0.104.1"
+uvicorn = {extras = ["standard"], version = "==0.24.0"}
+python-multipart = "==0.0.6"
+pydantic = "==2.5.0"
+pydantic-settings = "==2.1.0"
+redis = "==5.0.1"
+aiofiles = "==23.2.0"
+structlog = "==23.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+pytest-asyncio = "==0.21.1"
+httpx = "==0.25.2"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.dev-dependencies]
-pytest = "^8.2.0"

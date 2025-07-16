@@ -1,0 +1,26 @@
+{
+  "id": "83ad468c-8b16-4257-b197-c24b3ae8a313",
+  "created_at": "2025-07-03T14:04:21.166868",
+  "last_accessed": "2025-07-03T14:04:21.168298",
+  "original_filename": "DeFi_Protocol_Market_Share.csv",
+  "file_path": null,
+  "columns": [
+    "date",
+    "Uniswap",
+    "Aave",
+    "Compound",
+    "MakerDAO",
+    "Curve"
+  ],
+  "data_types": {
+    "date": "object",
+    "Uniswap": "int64",
+    "Aave": "int64",
+    "Compound": "int64",
+    "MakerDAO": "int64",
+    "Curve": "int64"
+  },
+  "row_count": 120,
+  "manipulations": [],
+  "data_path": "storage/sessions/83ad468c-8b16-4257-b197-c24b3ae8a313_data.parquet"
+}

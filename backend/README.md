@@ -16,21 +16,28 @@ FastAPI backend for the BWR Plots data visualization application.
 ### Prerequisites
 
 - Python 3.10+
-- pip or poetry
+- Poetry
 
 ### Installation
 
-1. Install dependencies:
+1. Install dependencies from the project root:
 ```bash
-pip install -r requirements.txt
+cd /path/to/bwr-plots
+poetry install
 ```
 
 2. Run the development server:
 ```bash
-python main.py
+poetry run python backend/main.py
 ```
 
-The API will be available at `http://localhost:8000`
+Or from the backend directory:
+```bash
+cd backend
+poetry run python main.py
+```
+
+The API will be available at `http://localhost:8005`
 
 ### Docker
 
@@ -38,21 +45,20 @@ Build and run with Docker:
 
 ```bash
 docker build -t bwr-plots-backend .
-docker run -p 8000:8000 bwr-plots-backend
+docker run -p 8005:8005 bwr-plots-backend
 ```
 
 ## API Documentation
 
 Once running, visit:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8005/docs`
+- ReDoc: `http://localhost:8005/redoc`
 
 ## Project Structure
 
 ```
 backend/
 ├── main.py                 # FastAPI application entry point
-├── requirements.txt        # Python dependencies
 ├── Dockerfile             # Container configuration
 ├── api/
 │   ├── __init__.py
@@ -90,8 +96,9 @@ Key settings:
 
 ### Running Tests
 
+From the project root:
 ```bash
-pytest
+poetry run pytest backend/tests/
 ```
 
 ### Code Style

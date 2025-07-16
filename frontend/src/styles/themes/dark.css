@@ -1,0 +1,86 @@
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Dark Theme                                                                          │
+   │ Default theme following 60-30-10 design principle                                   │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+[data-theme="dark"] {
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     60% - Primary surfaces and backgrounds (Dark neutrals)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-background: var(--gray-950);              /* #09090B - Main background */
+  --color-surface-1: var(--gray-900);               /* #18181B - Cards, containers */
+  --color-surface-2: var(--gray-800);               /* #27272A - Elevated surfaces */
+  --color-surface-3: var(--dark-300);               /* #2E2E33 - Highest elevation */
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     30% - Supporting elements (Borders, dividers, secondary UI)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-border-default: var(--gray-700);          /* #3F3F46 - Default borders */
+  --color-border-light: var(--gray-600);            /* #52525B - Subtle borders */
+  --color-border-strong: var(--gray-500);           /* #71717A - Emphasis borders */
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     10% - Accent colors (Purple primary, interactive elements)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-primary: #5B35D5;                         /* Main purple */
+  --color-primary-hover: #6D43DD;                   /* Hover state */
+  --color-primary-active: #4E2CC0;                  /* Active/pressed */
+  --color-primary-subtle: rgba(91, 53, 213, 0.1);   /* Subtle backgrounds */
+  --color-primary-border: rgba(91, 53, 213, 0.3);   /* Purple borders */
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Text colors
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-text-primary: var(--gray-50);             /* #FAFAFA - Main text */
+  --color-text-secondary: var(--gray-200);          /* #E4E4E7 - Secondary text */
+  --color-text-tertiary: var(--gray-400);           /* #A1A1AA - Muted text */
+  --color-text-disabled: var(--gray-600);           /* #52525B - Disabled text */
+  --color-text-inverse: var(--gray-950);            /* #09090B - On light surfaces */
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Semantic colors
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-success: var(--green-500);
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success-border: rgba(34, 197, 94, 0.3);
+  
+  --color-error: var(--red-500);
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+  
+  --color-warning: var(--yellow-500);
+  --color-warning-bg: rgba(234, 179, 8, 0.1);
+  --color-warning-border: rgba(234, 179, 8, 0.3);
+  
+  --color-info: var(--blue-500);
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-border: rgba(59, 130, 246, 0.3);
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Interactive states
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-active: rgba(255, 255, 255, 0.1);
+  --color-selected: var(--color-primary-subtle);
+  --color-focus-ring: var(--color-primary);
+  
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Component-specific tokens
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  /* Scrollbar */
+  --scrollbar-track: var(--color-surface-1);
+  --scrollbar-thumb: var(--gray-600);
+  --scrollbar-thumb-hover: var(--gray-500);
+  
+  /* Code blocks */
+  --code-bg: var(--color-surface-2);
+  --code-border: var(--color-border-default);
+  --code-text: var(--purple-400);
+  
+  /* Shadows */
+  --shadow-color: 0 0 0;
+  --shadow-sm: 0 1px 3px 0 rgb(var(--shadow-color) / 0.1), 0 1px 2px -1px rgb(var(--shadow-color) / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(var(--shadow-color) / 0.1), 0 2px 4px -2px rgb(var(--shadow-color) / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(var(--shadow-color) / 0.1), 0 4px 6px -4px rgb(var(--shadow-color) / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(var(--shadow-color) / 0.15), 0 8px 10px -6px rgb(var(--shadow-color) / 0.1);
+}

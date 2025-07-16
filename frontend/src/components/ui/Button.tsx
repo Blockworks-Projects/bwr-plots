@@ -12,13 +12,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={clsx(
-          'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none',
+          'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:opacity-50 disabled:pointer-events-none',
           {
-            'bg-blue-600 text-white hover:bg-blue-700': variant === 'primary',
-            'bg-gray-100 text-gray-900 hover:bg-gray-200': variant === 'secondary',
-            'border border-gray-300 bg-transparent hover:bg-gray-50': variant === 'outline',
-            'hover:bg-gray-100': variant === 'ghost',
-            'bg-red-600 text-white hover:bg-red-700': variant === 'destructive',
+            'bg-[var(--color-primary)] text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)]': variant === 'primary',
+            'bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-dark)] border border-[var(--color-border)]': variant === 'secondary',
+            'border border-[var(--color-border)] bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-dark)]': variant === 'outline',
+            'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-dark)]': variant === 'ghost',
+            'bg-[var(--color-error)] text-[var(--color-text-primary)] hover:bg-red-700': variant === 'destructive',
           },
           {
             'h-8 px-3 text-sm': size === 'sm',

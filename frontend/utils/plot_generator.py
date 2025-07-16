@@ -450,26 +450,40 @@ def generate_line_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
     """Generate line plot using scatter_plot method"""
     # Prepare column mappings
     x_col = config.get("x_column")
-    y_col = config.get("y_column")
+    y_col = config.get("y_column")  # Optional - if not provided, plot all numeric columns
 
-    if not x_col or not y_col:
-        raise ValueError("X and Y columns are required for line plots")
+    if not x_col:
+        raise ValueError("X column is required for line plots")
 
     if x_col not in df.columns:
         raise ValueError(f"X column '{x_col}' not found in data")
-    if y_col not in df.columns:
+
+    # If y_col is specified, validate it exists
+    if y_col and y_col not in df.columns:
         raise ValueError(f"Y column '{y_col}' not found in data")
 
-    # Prepare data for BWR plots - x-axis as index, y-axis as column
-    plot_df = df[[x_col, y_col]].copy()
+    # Prepare data for BWR plots
+    plot_df = df.copy()
+    
+    # Set x column as index (BWRPlots always uses index as x-axis)
     plot_df = plot_df.set_index(x_col)
-
-    # Ensure we have numeric data for y-axis
-    if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
-        try:
-            plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        except:
-            raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    
+    # If y_col is specified, only keep that column
+    # Otherwise, keep all numeric columns for multi-series plotting
+    if y_col:
+        # Single series plot
+        plot_df = plot_df[[y_col]]
+        if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
+            try:
+                plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+            except:
+                raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    else:
+        # Multi-series plot - keep all numeric columns
+        numeric_cols = plot_df.select_dtypes(include=[np.number]).columns.tolist()
+        if not numeric_cols:
+            raise ValueError("No numeric columns found for plotting")
+        plot_df = plot_df[numeric_cols]
 
     # Sort by index for better line plotting
     plot_df = plot_df.sort_index()
@@ -480,7 +494,7 @@ def generate_line_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
         subtitle=config.get("subtitle", ""),
         source=config.get("source", ""),
         x_axis_title=config.get("x_axis_title", x_col),
-        y_axis_title=config.get("y_axis_title", y_col),
+        y_axis_title=config.get("y_axis_title", "Value"),
         save_image=False,
         open_in_browser=False,
     )
@@ -527,26 +541,40 @@ def generate_scatter_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
     """Generate scatter plot"""
     # Prepare column mappings
     x_col = config.get("x_column")
-    y_col = config.get("y_column")
+    y_col = config.get("y_column")  # Optional - if not provided, plot all numeric columns
 
-    if not x_col or not y_col:
-        raise ValueError("X and Y columns are required for scatter plots")
+    if not x_col:
+        raise ValueError("X column is required for scatter plots")
 
     if x_col not in df.columns:
         raise ValueError(f"X column '{x_col}' not found in data")
-    if y_col not in df.columns:
+
+    # If y_col is specified, validate it exists
+    if y_col and y_col not in df.columns:
         raise ValueError(f"Y column '{y_col}' not found in data")
 
-    # Prepare data for BWR plots - x-axis as index, y-axis as column
-    plot_df = df[[x_col, y_col]].copy()
+    # Prepare data for BWR plots
+    plot_df = df.copy()
+    
+    # Set x column as index (BWRPlots always uses index as x-axis)
     plot_df = plot_df.set_index(x_col)
-
-    # Ensure we have numeric data for y-axis
-    if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
-        try:
-            plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        except:
-            raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    
+    # If y_col is specified, only keep that column
+    # Otherwise, keep all numeric columns for multi-series plotting
+    if y_col:
+        # Single series plot
+        plot_df = plot_df[[y_col]]
+        if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
+            try:
+                plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+            except:
+                raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    else:
+        # Multi-series plot - keep all numeric columns
+        numeric_cols = plot_df.select_dtypes(include=[np.number]).columns.tolist()
+        if not numeric_cols:
+            raise ValueError("No numeric columns found for plotting")
+        plot_df = plot_df[numeric_cols]
 
     # Sort by index for better plotting
     plot_df = plot_df.sort_index()
@@ -557,10 +585,9 @@ def generate_scatter_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
         subtitle=config.get("subtitle", ""),
         source=config.get("source", ""),
         x_axis_title=config.get("x_axis_title", x_col),
-        y_axis_title=config.get("y_axis_title", y_col),
+        y_axis_title=config.get("y_axis_title", "Value"),
         save_image=False,
         open_in_browser=False,
-        mode="markers",  # Use markers for scatter plot
     )
 
 
@@ -568,26 +595,40 @@ def generate_area_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
     """Generate area plot"""
     # Prepare column mappings
     x_col = config.get("x_column")
-    y_col = config.get("y_column")
+    y_col = config.get("y_column")  # Optional - if not provided, plot all numeric columns
 
-    if not x_col or not y_col:
-        raise ValueError("X and Y columns are required for area plots")
+    if not x_col:
+        raise ValueError("X column is required for area plots")
 
     if x_col not in df.columns:
         raise ValueError(f"X column '{x_col}' not found in data")
-    if y_col not in df.columns:
+
+    # If y_col is specified, validate it exists
+    if y_col and y_col not in df.columns:
         raise ValueError(f"Y column '{y_col}' not found in data")
 
-    # Prepare data for BWR plots - x-axis as index, y-axis as column
-    plot_df = df[[x_col, y_col]].copy()
+    # Prepare data for BWR plots
+    plot_df = df.copy()
+    
+    # Set x column as index (BWRPlots always uses index as x-axis)
     plot_df = plot_df.set_index(x_col)
-
-    # Ensure we have numeric data for y-axis
-    if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
-        try:
-            plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
-        except:
-            raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    
+    # If y_col is specified, only keep that column
+    # Otherwise, keep all numeric columns for multi-series plotting
+    if y_col:
+        # Single series plot
+        plot_df = plot_df[[y_col]]
+        if not pd.api.types.is_numeric_dtype(plot_df[y_col]):
+            try:
+                plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+            except:
+                raise ValueError(f"Y column '{y_col}' could not be converted to numeric")
+    else:
+        # Multi-series plot - keep all numeric columns
+        numeric_cols = plot_df.select_dtypes(include=[np.number]).columns.tolist()
+        if not numeric_cols:
+            raise ValueError("No numeric columns found for plotting")
+        plot_df = plot_df[numeric_cols]
 
     # Sort by index for better plotting
     plot_df = plot_df.sort_index()
@@ -598,7 +639,7 @@ def generate_area_plot(bwr_plots, df: pd.DataFrame, config: Dict[str, Any]):
         subtitle=config.get("subtitle", ""),
         source=config.get("source", ""),
         x_axis_title=config.get("x_axis_title", x_col),
-        y_axis_title=config.get("y_axis_title", y_col),
+        y_axis_title=config.get("y_axis_title", "Value"),
         save_image=False,
         open_in_browser=False,
     )

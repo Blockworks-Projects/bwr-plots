@@ -49,11 +49,7 @@ async def upload_data(file: UploadFile = File(...)):
         
         # Create session and store data
         session_id = session_manager.create_session()
-        session_manager.store_data(session_id, df, {
-            "filename": file.filename,
-            "upload_timestamp": datetime.now(),
-            "file_size": len(file_content)
-        })
+        session_manager.store_dataframe(session_id, df, file.filename)
         
         # Generate column info
         columns = [
@@ -103,9 +99,7 @@ async def get_data_preview(session_id: str, max_rows: int = 100):
     """
     try:
         # Get data from session
-        df = session_manager.get_data(session_id)
-        if df is None:
-            raise HTTPException(status_code=404, detail="Session not found or no data loaded")
+        df = session_manager.get_dataframe(session_id)
         
         # Generate preview
         preview = file_handler.generate_preview(df, max_rows)
@@ -151,9 +145,7 @@ async def manipulate_data(request: DataManipulationRequest):
     """
     try:
         # Get original data from session
-        original_df = session_manager.get_data(request.session_id)
-        if original_df is None:
-            raise HTTPException(status_code=404, detail="Session not found or no data loaded")
+        original_df = session_manager.get_dataframe(request.session_id)
         
         original_shape = list(original_df.shape)
         
@@ -170,9 +162,10 @@ async def manipulate_data(request: DataManipulationRequest):
         processed_df = data_processor.apply_operations(original_df, operations)
         
         # Update session with processed data
-        session_manager.store_data(request.session_id, processed_df, {
-            "operations_applied": [op["type"] for op in operations],
-            "last_manipulation": datetime.now()
+        session_manager.store_dataframe(request.session_id, processed_df)
+        session_manager.add_manipulation(request.session_id, {
+            "operations": [op["type"] for op in operations],
+            "timestamp": datetime.now().isoformat()
         })
         
         new_shape = list(processed_df.shape)
@@ -211,9 +204,7 @@ async def get_data_summary(session_id: str):
         Dict: Data summary statistics
     """
     try:
-        df = session_manager.get_data(session_id)
-        if df is None:
-            raise HTTPException(status_code=404, detail="Session not found or no data loaded")
+        df = session_manager.get_dataframe(session_id)
         
         summary = data_processor.get_data_summary(df)
         summary["session_id"] = session_id
@@ -263,9 +254,7 @@ async def get_column_options(session_id: str):
         Dict: Available column options
     """
     try:
-        df = session_manager.get_data(session_id)
-        if df is None:
-            raise HTTPException(status_code=404, detail="Session not found or no data loaded")
+        df = session_manager.get_dataframe(session_id)
         
         options = file_handler.get_column_options(df)
         

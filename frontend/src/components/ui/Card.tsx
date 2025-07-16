@@ -11,11 +11,11 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={clsx(
-          'rounded-lg bg-white',
+          'rounded-lg bg-[var(--color-bg-card)]',
           {
-            'border border-gray-200 shadow-sm': variant === 'default',
-            'border border-gray-300': variant === 'outlined',
-            'shadow-md border border-gray-200': variant === 'elevated',
+            'border border-[var(--color-border)] shadow-sm': variant === 'default',
+            'border border-[var(--color-border-light)]': variant === 'outlined',
+            'shadow-md border border-[var(--color-border)] bg-[var(--color-bg-elevated)]': variant === 'elevated',
           },
           className
         )}
@@ -44,7 +44,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingEleme
     <h3
       ref={ref}
       className={clsx(
-        'text-lg font-semibold leading-none tracking-tight text-gray-900',
+        'text-lg font-semibold leading-none tracking-tight text-[var(--color-text-primary)]',
         className
       )}
       {...props}
@@ -58,7 +58,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={clsx('text-sm text-gray-600 mt-1', className)}
+      className={clsx('text-sm text-[var(--color-text-muted)] mt-1', className)}
       {...props}
     />
   )

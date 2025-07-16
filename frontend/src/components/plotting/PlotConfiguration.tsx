@@ -1,15 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
-import { api } from '@/lib/api';
 import { PlotType } from '@/types/plots';
-import { ColumnInfo } from '@/types/api';
 
 interface PlotConfigurationData {
   title?: string;
@@ -37,78 +34,70 @@ interface PlotConfigurationData {
 }
 
 interface PlotConfigurationProps {
-  plotType: PlotType;
-  sessionId: string;
-  onConfigurationChange: (config: PlotConfigurationData) => void;
+  plotType: PlotType | string;
+  data: any[];
+  columns: string[];
+  onConfigChange: (config: PlotConfigurationData) => void;
   initialConfiguration?: Partial<PlotConfigurationData>;
   className?: string;
 }
 
 export function PlotConfiguration({
   plotType,
-  sessionId,
-  onConfigurationChange,
+  data,
+  columns,
+  onConfigChange,
   initialConfiguration = {},
   className = ''
 }: PlotConfigurationProps) {
   const [config, setConfig] = useState<PlotConfigurationData>(initialConfiguration);
 
-  // Fetch column information for the current session
-  const { data: dataPreview, isLoading: isLoadingData } = useQuery({
-    queryKey: ['dataPreview', sessionId],
-    queryFn: () => api.data.preview(sessionId),
-    enabled: !!sessionId,
-  });
-
-  const columns = dataPreview?.columns || [];
+  // Use the columns passed directly as props
+  const isLoadingData = false;
+  const columnInfo = columns.map(col => ({ name: col, type: 'string' }));
   
-  const numericColumns = columns
-    .filter((col: ColumnInfo) => ['int64', 'float64', 'number'].includes(col.type))
-    .map((col: ColumnInfo) => ({ value: col.name, label: col.name }));
-
-  const dateColumns = columns
-    .filter((col: ColumnInfo) => ['datetime64[ns]', 'date', 'datetime'].includes(col.type))
-    .map((col: ColumnInfo) => ({ value: col.name, label: col.name }));
-
-  const categoricalColumns = columns
-    .filter((col: ColumnInfo) => ['object', 'string', 'category'].includes(col.type))
-    .map((col: ColumnInfo) => ({ value: col.name, label: col.name }));
-
-  const allColumns = columns.map((col: ColumnInfo) => ({ 
-    value: col.name, 
-    label: `${col.name} (${col.type})` 
+  // For now, treat all columns as available for any purpose
+  // In a real app, you'd analyze the data to determine column types
+  const allColumns = columns.map(col => ({ 
+    value: col, 
+    label: col 
   }));
-
-  // Update configuration when it changes
-  useEffect(() => {
-    onConfigurationChange(config);
-  }, [config, onConfigurationChange]);
+  
+  const numericColumns = allColumns;
+  const dateColumns = allColumns;
+  const categoricalColumns = allColumns;
 
   const updateConfig = (key: string, value: any) => {
-    setConfig((prev) => ({
-      ...prev,
+    const newConfig = {
+      ...config,
       [key]: value
-    }));
+    };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const updateStyleOptions = (key: string, value: any) => {
-    setConfig((prev) => ({
-      ...prev,
+    const newConfig = {
+      ...config,
       style_options: {
-        ...prev.style_options,
+        ...config.style_options,
         [key]: value
       }
-    }));
+    };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const updateAxisConfig = (key: string, value: any) => {
-    setConfig((prev) => ({
-      ...prev,
+    const newConfig = {
+      ...config,
       axis_config: {
-        ...prev.axis_config,
+        ...config.axis_config,
         [key]: value
       }
-    }));
+    };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   if (isLoadingData) {
@@ -151,14 +140,14 @@ export function PlotConfiguration({
     }
   };
 
-  const { x_options, y_options } = getColumnOptions(plotType);
+  const { x_options, y_options } = getColumnOptions(plotType as PlotType);
 
   const renderBasicSettings = () => (
     <div className="space-y-6">
       {/* Plot Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Plot Title
           </label>
           <Input
@@ -169,7 +158,7 @@ export function PlotConfiguration({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Subtitle
           </label>
           <Input
@@ -183,11 +172,11 @@ export function PlotConfiguration({
 
       {/* Required Fields */}
       <div>
-        <h4 className="text-md font-medium text-gray-900 mb-3">Required Settings</h4>
+        <h4 className="text-md font-medium text-gray-100 mb-3">Required Settings</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {x_options.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-100 mb-1">
                 {plotType === 'time_series' ? 'Date Column' : 
                  ['bar', 'horizontal_bar'].includes(plotType) ? 'Category Column' : 
                  'X-Axis Column'} *
@@ -202,16 +191,21 @@ export function PlotConfiguration({
           )}
           {y_options.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-100 mb-1">
                 {plotType === 'histogram' ? '' : 
                  plotType === 'time_series' ? 'Value Column' : 
-                 'Y-Axis Column'} {plotType !== 'histogram' ? '*' : ''}
+                 'Y-Axis Column'} {plotType !== 'histogram' && !['scatter', 'line', 'area'].includes(plotType) ? '*' : ''}
+                {['scatter', 'line', 'area'].includes(plotType) && (
+                  <span className="text-sm font-normal text-gray-500 ml-1">
+                    (Optional - leave empty to plot all numeric columns)
+                  </span>
+                )}
               </label>
               <Select
                 options={y_options}
                 value={config.y_column || ''}
                 onChange={(e) => updateConfig('y_column', e.target.value)}
-                placeholder="Select column..."
+                placeholder={['scatter', 'line', 'area'].includes(plotType) ? "All numeric columns (default)" : "Select column..."}
               />
             </div>
           )}
@@ -220,11 +214,11 @@ export function PlotConfiguration({
 
       {/* Optional Fields */}
       <div>
-        <h4 className="text-md font-medium text-gray-900 mb-3">Optional Settings</h4>
+        <h4 className="text-md font-medium text-gray-100 mb-3">Optional Settings</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {categoricalColumns.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-100 mb-1">
                 Color Column
               </label>
               <Select
@@ -237,7 +231,7 @@ export function PlotConfiguration({
           )}
           {numericColumns.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-100 mb-1">
                 Size Column
               </label>
               <Select
@@ -250,7 +244,7 @@ export function PlotConfiguration({
           )}
           {categoricalColumns.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-100 mb-1">
                 Facet Column
               </label>
               <Select
@@ -266,10 +260,10 @@ export function PlotConfiguration({
 
       {/* Axis Configuration */}
       <div>
-        <h4 className="text-md font-medium text-gray-900 mb-3">Axis Labels</h4>
+        <h4 className="text-md font-medium text-gray-100 mb-3">Axis Labels</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-100 mb-1">
               X-Axis Title
             </label>
             <Input
@@ -280,7 +274,7 @@ export function PlotConfiguration({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-100 mb-1">
               Y-Axis Title
             </label>
             <Input
@@ -299,7 +293,7 @@ export function PlotConfiguration({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Theme
           </label>
           <Select
@@ -316,7 +310,7 @@ export function PlotConfiguration({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Font Family
           </label>
           <Select
@@ -335,7 +329,7 @@ export function PlotConfiguration({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Font Size
           </label>
           <Input
@@ -350,7 +344,7 @@ export function PlotConfiguration({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Background Color
           </label>
           <div className="flex items-center space-x-2">
@@ -377,9 +371,9 @@ export function PlotConfiguration({
             type="checkbox"
             checked={config.style_options?.grid_visible || false}
             onChange={(e) => updateStyleOptions('grid_visible', e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            className="w-4 h-4 text-zinc-600 bg-gray-100 border-gray-300 rounded focus:ring-zinc-500"
           />
-          <span className="ml-2 text-sm text-gray-900">Show Grid</span>
+          <span className="ml-2 text-sm text-gray-200">Show Grid</span>
         </label>
         <p className="mt-1 text-sm text-gray-500">Display grid lines on the plot</p>
       </div>
@@ -390,7 +384,7 @@ export function PlotConfiguration({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Data Source
           </label>
           <Input
@@ -401,7 +395,7 @@ export function PlotConfiguration({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Watermark
           </label>
           <Input
@@ -415,7 +409,7 @@ export function PlotConfiguration({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Value Prefix
           </label>
           <Input
@@ -426,7 +420,7 @@ export function PlotConfiguration({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-100 mb-1">
             Value Suffix
           </label>
           <Input
@@ -444,7 +438,7 @@ export function PlotConfiguration({
     <Card className={className}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-100">
             Configure {plotType.replace('_', ' ')} Plot
           </h3>
         </div>

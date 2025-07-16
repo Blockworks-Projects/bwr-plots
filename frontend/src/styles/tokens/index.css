@@ -1,0 +1,265 @@
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Design Tokens                                                                       │
+   │ Core design system values following 60-30-10 principle                              │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+:root {
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SPACING SCALE (Base: 4px)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;  /* 2px */
+  --space-1: 0.25rem;     /* 4px */
+  --space-1-5: 0.375rem;  /* 6px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-2-5: 0.625rem;  /* 10px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-3-5: 0.875rem;  /* 14px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-7: 1.75rem;     /* 28px */
+  --space-8: 2rem;        /* 32px */
+  --space-9: 2.25rem;     /* 36px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-11: 2.75rem;    /* 44px */
+  --space-12: 3rem;       /* 48px */
+  --space-14: 3.5rem;     /* 56px */
+  --space-16: 4rem;       /* 64px */
+  --space-20: 5rem;       /* 80px */
+  --space-24: 6rem;       /* 96px */
+  --space-28: 7rem;       /* 112px */
+  --space-32: 8rem;       /* 128px */
+  --space-36: 9rem;       /* 144px */
+  --space-40: 10rem;      /* 160px */
+  --space-44: 11rem;      /* 176px */
+  --space-48: 12rem;      /* 192px */
+  --space-52: 13rem;      /* 208px */
+  --space-56: 14rem;      /* 224px */
+  --space-60: 15rem;      /* 240px */
+  --space-64: 16rem;      /* 256px */
+  --space-72: 18rem;      /* 288px */
+  --space-80: 20rem;      /* 320px */
+  --space-96: 24rem;      /* 384px */
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     TYPOGRAPHY SCALE
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  /* Font Families */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  
+  /* Font Sizes - Perfect Fourth Scale (1.333) */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+  --text-5xl: 3rem;       /* 48px */
+  --text-6xl: 3.75rem;    /* 60px */
+  --text-7xl: 4.5rem;     /* 72px */
+  --text-8xl: 6rem;       /* 96px */
+  --text-9xl: 8rem;       /* 128px */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* Font Weights */
+  --font-thin: 100;
+  --font-extralight: 200;
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  --font-black: 900;
+
+  /* Letter Spacing */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     COLOR SYSTEM - 60/30/10 Principle
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  
+  /* Primary Brand Colors (10% - Accents & CTAs) */
+  --purple-50: #F5F3FF;
+  --purple-100: #EDE9FE;
+  --purple-200: #DDD6FE;
+  --purple-300: #C4B5FD;
+  --purple-400: #A78BFA;
+  --purple-500: #8B5CF6;
+  --purple-600: #7C3AED;
+  --purple-700: #6D28D9;
+  --purple-800: #5B21B6;
+  --purple-900: #4C1D95;
+  --purple-950: #2E1065;
+
+  /* Neutral Colors (60% - Main backgrounds & surfaces) */
+  --gray-50: #FAFAFA;
+  --gray-100: #F4F4F5;
+  --gray-200: #E4E4E7;
+  --gray-300: #D4D4D8;
+  --gray-400: #A1A1AA;
+  --gray-500: #71717A;
+  --gray-600: #52525B;
+  --gray-700: #3F3F46;
+  --gray-800: #27272A;
+  --gray-900: #18181B;
+  --gray-950: #09090B;
+
+  /* Dark Theme Neutrals */
+  --dark-50: #18181B;
+  --dark-100: #1F1F23;
+  --dark-200: #27272A;
+  --dark-300: #2E2E33;
+  --dark-400: #3F3F46;
+  --dark-500: #52525B;
+  --dark-600: #71717A;
+  --dark-700: #A1A1AA;
+  --dark-800: #D4D4D8;
+  --dark-900: #E4E4E7;
+  --dark-950: #FAFAFA;
+
+  /* Supporting Colors (30% - Borders, secondary elements) */
+  --slate-50: #F8FAFC;
+  --slate-100: #F1F5F9;
+  --slate-200: #E2E8F0;
+  --slate-300: #CBD5E1;
+  --slate-400: #94A3B8;
+  --slate-500: #64748B;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1E293B;
+  --slate-900: #0F172A;
+  --slate-950: #020617;
+
+  /* Semantic Colors */
+  --green-50: #F0FDF4;
+  --green-500: #22C55E;
+  --green-600: #16A34A;
+  --green-700: #15803D;
+  --green-900: #14532D;
+
+  --red-50: #FEF2F2;
+  --red-500: #EF4444;
+  --red-600: #DC2626;
+  --red-700: #B91C1C;
+  --red-900: #7F1D1D;
+
+  --yellow-50: #FEFCE8;
+  --yellow-500: #EAB308;
+  --yellow-600: #CA8A04;
+  --yellow-700: #A16207;
+  --yellow-900: #713F12;
+
+  --blue-50: #EFF6FF;
+  --blue-500: #3B82F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+  --blue-900: #1E3A8A;
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     BREAKPOINTS
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --screen-xs: 475px;
+  --screen-sm: 640px;
+  --screen-md: 768px;
+  --screen-lg: 1024px;
+  --screen-xl: 1280px;
+  --screen-2xl: 1536px;
+  --screen-3xl: 1920px;
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     ANIMATION & TRANSITIONS
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  /* Durations */
+  --duration-75: 75ms;
+  --duration-100: 100ms;
+  --duration-150: 150ms;
+  --duration-200: 200ms;
+  --duration-300: 300ms;
+  --duration-500: 500ms;
+  --duration-700: 700ms;
+  --duration-1000: 1000ms;
+
+  /* Easings */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Z-INDEX SCALE
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --z-auto: auto;
+  --z-0: 0;
+  --z-10: 10;
+  --z-20: 20;
+  --z-30: 30;
+  --z-40: 40;
+  --z-50: 50;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-notification: 1080;
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SHADOWS
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-none: 0 0 #0000;
+
+  /* Dark mode shadows with purple tint */
+  --shadow-purple-sm: 0 1px 3px 0 rgb(91 33 182 / 0.1), 0 1px 2px -1px rgb(91 33 182 / 0.1);
+  --shadow-purple-md: 0 4px 6px -1px rgb(91 33 182 / 0.1), 0 2px 4px -2px rgb(91 33 182 / 0.1);
+  --shadow-purple-lg: 0 10px 15px -3px rgb(91 33 182 / 0.15), 0 4px 6px -4px rgb(91 33 182 / 0.1);
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     BORDER RADIUS
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --radius-none: 0;
+  --radius-sm: 0.125rem;  /* 2px */
+  --radius-md: 0.375rem;  /* 6px */
+  --radius-lg: 0.5rem;    /* 8px */
+  --radius-xl: 0.75rem;   /* 12px */
+  --radius-2xl: 1rem;     /* 16px */
+  --radius-3xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     BLUR VALUES
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  --blur-none: 0;
+  --blur-sm: 4px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
+}

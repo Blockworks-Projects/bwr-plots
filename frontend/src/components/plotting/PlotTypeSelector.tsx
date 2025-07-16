@@ -10,6 +10,7 @@ import { PlotType } from '@/types/plots';
 interface PlotTypeSelectorProps {
   selectedType: PlotType | null;
   onTypeSelect: (type: PlotType) => void;
+  suggestedType?: string;
   className?: string;
 }
 
@@ -58,7 +59,7 @@ const PLOT_TYPE_DESCRIPTIONS = {
   }
 } as const;
 
-export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }: PlotTypeSelectorProps) {
+export function PlotTypeSelector({ selectedType, onTypeSelect, suggestedType, className = '' }: PlotTypeSelectorProps) {
   const { data: plotTypes, isLoading, error } = useQuery({
     queryKey: ['plotTypes'],
     queryFn: api.plots.getTypes,
@@ -69,7 +70,7 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
     return (
       <div className={`flex items-center justify-center p-8 ${className}`}>
         <LoadingSpinner size="lg" />
-        <span className="ml-3 text-gray-600">Loading plot types...</span>
+        <span className="ml-3 text-[var(--color-text-muted)]">Loading plot types...</span>
       </div>
     );
   }
@@ -77,10 +78,10 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
   if (error) {
     return (
       <div className={`p-6 text-center ${className}`}>
-        <div className="text-red-600 mb-2">
+        <div className="text-[var(--color-error)] mb-2">
           ⚠️ Failed to load plot types
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-[var(--color-text-muted)]">
           {error instanceof Error ? error.message : 'Unknown error occurred'}
         </div>
       </div>
@@ -89,7 +90,7 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
 
   if (!plotTypes?.plot_types?.length) {
     return (
-      <div className={`p-6 text-center text-gray-600 ${className}`}>
+      <div className={`p-6 text-center text-[var(--color-text-muted)] ${className}`}>
         No plot types available
       </div>
     );
@@ -97,7 +98,7 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
 
   return (
     <div className={className}>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
         Select Plot Type
       </h3>
       
@@ -107,6 +108,7 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
           const type = plotTypeObj.type || plotTypeObj;
           const config = PLOT_TYPE_DESCRIPTIONS[type as keyof typeof PLOT_TYPE_DESCRIPTIONS];
           const isSelected = selectedType === type;
+          const isSuggested = suggestedType === type;
           
           // Use API data if available, fallback to local config
           const displayName = plotTypeObj.name || config?.title || (typeof type === 'string' ? type.replace('_', ' ') : String(type));
@@ -118,8 +120,8 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
               key={type}
               className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 isSelected 
-                  ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
-                  : 'hover:border-gray-300'
+                  ? 'ring-2 ring-[var(--color-primary)] bg-[var(--color-bg-elevated)] border-[var(--color-primary)]' 
+                  : 'hover:border-[var(--color-border-light)]'
               }`}
               onClick={() => onTypeSelect(type as PlotType)}
             >
@@ -128,20 +130,25 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
                   <span className="text-2xl mr-3" role="img" aria-label={displayName}>
                     {icon}
                   </span>
-                  <h4 className="font-medium text-gray-900">
-                    {displayName}
-                  </h4>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-[var(--color-text-primary)]">
+                      {displayName}
+                    </h4>
+                    {isSuggested && !isSelected && (
+                      <span className="text-xs text-[var(--color-text-muted)]">Suggested</span>
+                    )}
+                  </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-[var(--color-text-muted)] mb-3">
                   {description}
                 </p>
                 
                 {config?.features && (
                   <div className="space-y-1">
                     {config.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-xs text-gray-500">
-                        <span className="w-1 h-1 bg-gray-400 rounded-full mr-2" />
+                      <div key={index} className="flex items-center text-xs text-[var(--color-text-muted)]">
+                        <span className="w-1 h-1 bg-[var(--color-border)] rounded-full mr-2" />
                         {feature}
                       </div>
                     ))}
@@ -150,10 +157,10 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
                 
                 {plotTypeObj.required_columns && (
                   <div className="mt-3">
-                    <div className="text-xs text-gray-500 mb-1">Required columns:</div>
+                    <div className="text-xs text-[var(--color-text-muted)] mb-1">Required columns:</div>
                     <div className="flex flex-wrap gap-1">
                       {plotTypeObj.required_columns.map((col: string, index: number) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-xs rounded">
+                        <span key={index} className="px-2 py-1 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] text-xs rounded">
                           {col}
                         </span>
                       ))}
@@ -162,8 +169,8 @@ export function PlotTypeSelector({ selectedType, onTypeSelect, className = '' }:
                 )}
                 
                 {isSelected && (
-                  <div className="mt-3 flex items-center text-sm text-blue-600">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+                  <div className="mt-3 flex items-center text-sm text-[var(--color-primary)]">
+                    <span className="w-2 h-2 bg-[var(--color-primary)] rounded-full mr-2" />
                     Selected
                   </div>
                 )}

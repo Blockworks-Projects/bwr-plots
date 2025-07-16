@@ -7,9 +7,7 @@ import {
 } from '@/types/api';
 
 // API client configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '' // Use relative URLs in production (Vercel)
-  : 'http://localhost:3000';
+const API_BASE_URL = ''; // Always use relative URLs for Next.js API routes
 
 class ApiError extends Error {
   constructor(

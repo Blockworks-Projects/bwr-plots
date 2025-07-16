@@ -812,7 +812,6 @@ class BWRPlots:
             ticks="outside",
             tickwidth=cfg_axes["tickwidth"] * 1.5,
             ticklen=cfg_axes["x_ticklen"],
-            ticklabelstandoff=0,
             nticks=merged_options["x_nticks"],
             tickformat=xaxis_tickformat,
             tickfont=self._get_font_dict("tick"),

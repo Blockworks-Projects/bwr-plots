@@ -14,7 +14,7 @@ import io
 
 
 # API base URL (adjust as needed)
-API_BASE_URL = "http://localhost:8000/api/v1"
+API_BASE_URL = "http://localhost:8005/api/v1"
 
 
 def create_sample_data():
@@ -337,7 +337,7 @@ def main():
         print(f"✅ Successful tests: {successful_tests}/8")
         
     except requests.exceptions.ConnectionError:
-        print("❌ Connection error: Make sure the API server is running on http://localhost:8000")
+        print("❌ Connection error: Make sure the API server is running on http://localhost:8005")
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 

@@ -33,7 +33,7 @@ backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 # Test configuration
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8005"
 API_BASE = f"{BASE_URL}/api/v1"
 
 class TestBackendIntegration:

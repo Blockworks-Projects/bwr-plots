@@ -64,7 +64,7 @@ export function FormSection({
                 {title}
                 {required && <span className="text-red-500 ml-1">*</span>}
                 {badge && (
-                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-300">
                     {badge}
                   </span>
                 )}

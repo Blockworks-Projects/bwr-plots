@@ -1,0 +1,139 @@
+/**
+ * Layout System CSS Variables
+ * ---
+ * bwr-plots/frontend/src/components/layout/styles/variables.css
+ * ---
+ * CSS custom properties for the layout system
+ */
+
+:root {
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Spacing Scale                                                                      │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-spacing-xs: 0.25rem;   /* 4px */
+  --layout-spacing-sm: 0.5rem;    /* 8px */
+  --layout-spacing-md: 1rem;      /* 16px */
+  --layout-spacing-lg: 1.5rem;    /* 24px */
+  --layout-spacing-xl: 2rem;      /* 32px */
+  --layout-spacing-2xl: 3rem;     /* 48px */
+  --layout-spacing-3xl: 4rem;     /* 64px */
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Container Sizes                                                                    │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-container-sm: 640px;
+  --layout-container-md: 768px;
+  --layout-container-lg: 1024px;
+  --layout-container-xl: 1280px;
+  --layout-container-2xl: 1536px;
+  --layout-container-full: 100%;
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Common Component Sizes                                                             │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-header-height: 64px;
+  --layout-footer-height: 48px;
+  --layout-sidebar-width: 280px;
+  --layout-sidebar-width-collapsed: 64px;
+  --layout-panel-min-width: 280px;
+  --layout-panel-max-width: 480px;
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Z-Index Scale                                                                      │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-z-base: 0;
+  --layout-z-dropdown: 1000;
+  --layout-z-sticky: 1020;
+  --layout-z-fixed: 1030;
+  --layout-z-modal-backdrop: 1040;
+  --layout-z-modal: 1050;
+  --layout-z-popover: 1060;
+  --layout-z-tooltip: 1070;
+  --layout-z-notification: 1080;
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Animation & Transitions                                                            │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-transition-fast: 150ms;
+  --layout-transition-normal: 200ms;
+  --layout-transition-slow: 300ms;
+  --layout-easing-in: cubic-bezier(0.4, 0, 1, 1);
+  --layout-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --layout-easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Shadows                                                                            │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --layout-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --layout-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --layout-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* ┌────────────────────────────────────────────────────────────────────────────────────┐
+     │ Border Radius                                                                      │
+     └────────────────────────────────────────────────────────────────────────────────────┘ */
+  
+  --layout-radius-sm: 4px;
+  --layout-radius-md: 8px;
+  --layout-radius-lg: 12px;
+  --layout-radius-xl: 16px;
+  --layout-radius-full: 9999px;
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Media Query Variables (for JS access)                                             │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+@media (max-width: 639px) {
+  :root {
+    --layout-current-breakpoint: 'sm';
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  :root {
+    --layout-current-breakpoint: 'sm';
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --layout-current-breakpoint: 'md';
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root {
+    --layout-current-breakpoint: 'lg';
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  :root {
+    --layout-current-breakpoint: 'xl';
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --layout-current-breakpoint: '2xl';
+  }
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Reduced Motion Support                                                             │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --layout-transition-fast: 0ms;
+    --layout-transition-normal: 0ms;
+    --layout-transition-slow: 0ms;
+  }
+}

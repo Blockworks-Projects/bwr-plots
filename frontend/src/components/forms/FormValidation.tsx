@@ -42,7 +42,7 @@ export function ValidationMessage({
       case 'warning':
         return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />;
       case 'info':
-        return <InformationCircleIcon className="h-5 w-5 text-blue-400" />;
+        return <InformationCircleIcon className="h-5 w-5 text-zinc-400" />;
       case 'success':
         return <CheckCircleIcon className="h-5 w-5 text-green-400" />;
       default:
@@ -53,15 +53,15 @@ export function ValidationMessage({
   const getStyles = () => {
     switch (type) {
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800';
+        return 'bg-red-900/20 border-red-800 text-red-400';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+        return 'bg-yellow-900/20 border-yellow-800 text-yellow-400';
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-zinc-900 border-zinc-700 text-zinc-300';
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800';
+        return 'bg-green-900/20 border-green-800 text-green-400';
       default:
-        return 'bg-gray-50 border-gray-200 text-gray-800';
+        return 'bg-zinc-900 border-zinc-700 text-zinc-400';
     }
   };
 
@@ -107,7 +107,7 @@ export function FieldValidationMessage({
       case 'warning':
         return 'text-yellow-600';
       case 'info':
-        return 'text-blue-600';
+        return 'text-zinc-400';
       case 'success':
         return 'text-green-600';
       default:

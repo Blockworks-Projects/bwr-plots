@@ -22,7 +22,7 @@ from pathlib import Path
 def check_backend_server():
     """Check if the backend server is running"""
     try:
-        response = requests.get("http://localhost:8000/api/v1/health", timeout=5)
+        response = requests.get("http://localhost:8005/api/v1/health", timeout=5)
         if response.status_code == 200:
             print("✅ Backend server is running")
             return True

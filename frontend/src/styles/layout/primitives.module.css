@@ -1,0 +1,220 @@
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Layout Primitives                                                                   │
+   │ Reusable CSS Module classes for layout components                                   │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BOX PRIMITIVE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.box {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Padding variants */
+.box_padding_none { padding: 0; }
+.box_padding_xs { padding: var(--space-1); }
+.box_padding_sm { padding: var(--space-2); }
+.box_padding_md { padding: var(--space-4); }
+.box_padding_lg { padding: var(--space-6); }
+.box_padding_xl { padding: var(--space-8); }
+.box_padding_2xl { padding: var(--space-12); }
+
+/* Margin variants */
+.box_margin_none { margin: 0; }
+.box_margin_xs { margin: var(--space-1); }
+.box_margin_sm { margin: var(--space-2); }
+.box_margin_md { margin: var(--space-4); }
+.box_margin_lg { margin: var(--space-6); }
+.box_margin_xl { margin: var(--space-8); }
+.box_margin_2xl { margin: var(--space-12); }
+.box_margin_auto { margin: auto; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FLEX PRIMITIVE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.flex {
+  display: flex;
+  min-width: 0;
+}
+
+/* Direction */
+.flex_row { flex-direction: row; }
+.flex_column { flex-direction: column; }
+.flex_rowReverse { flex-direction: row-reverse; }
+.flex_columnReverse { flex-direction: column-reverse; }
+
+/* Wrap */
+.flex_wrap { flex-wrap: wrap; }
+.flex_nowrap { flex-wrap: nowrap; }
+.flex_wrapReverse { flex-wrap: wrap-reverse; }
+
+/* Justify */
+.flex_justifyStart { justify-content: flex-start; }
+.flex_justifyEnd { justify-content: flex-end; }
+.flex_justifyCenter { justify-content: center; }
+.flex_justifyBetween { justify-content: space-between; }
+.flex_justifyAround { justify-content: space-around; }
+.flex_justifyEvenly { justify-content: space-evenly; }
+
+/* Align */
+.flex_alignStart { align-items: flex-start; }
+.flex_alignEnd { align-items: flex-end; }
+.flex_alignCenter { align-items: center; }
+.flex_alignBaseline { align-items: baseline; }
+.flex_alignStretch { align-items: stretch; }
+
+/* Gap */
+.flex_gap_none { gap: 0; }
+.flex_gap_xs { gap: var(--space-1); }
+.flex_gap_sm { gap: var(--space-2); }
+.flex_gap_md { gap: var(--space-4); }
+.flex_gap_lg { gap: var(--space-6); }
+.flex_gap_xl { gap: var(--space-8); }
+.flex_gap_2xl { gap: var(--space-12); }
+
+/* Flex child properties */
+.flex_grow { flex-grow: 1; }
+.flex_shrink { flex-shrink: 1; }
+.flex_noshrink { flex-shrink: 0; }
+.flex_basis_auto { flex-basis: auto; }
+.flex_basis_full { flex-basis: 100%; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GRID PRIMITIVE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.grid {
+  display: grid;
+  min-width: 0;
+}
+
+/* Columns */
+.grid_cols_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid_cols_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid_cols_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid_cols_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid_cols_5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.grid_cols_6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.grid_cols_12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.grid_cols_auto { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+
+/* Gap */
+.grid_gap_none { gap: 0; }
+.grid_gap_xs { gap: var(--space-1); }
+.grid_gap_sm { gap: var(--space-2); }
+.grid_gap_md { gap: var(--space-4); }
+.grid_gap_lg { gap: var(--space-6); }
+.grid_gap_xl { gap: var(--space-8); }
+.grid_gap_2xl { gap: var(--space-12); }
+
+/* Alignment */
+.grid_alignStart { align-items: start; }
+.grid_alignEnd { align-items: end; }
+.grid_alignCenter { align-items: center; }
+.grid_alignStretch { align-items: stretch; }
+
+.grid_justifyStart { justify-items: start; }
+.grid_justifyEnd { justify-items: end; }
+.grid_justifyCenter { justify-items: center; }
+.grid_justifyStretch { justify-items: stretch; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STACK PRIMITIVE (Vertical spacing)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.stack > * + * {
+  margin-top: var(--stack-gap, var(--space-4));
+}
+
+.stack_gap_none { --stack-gap: 0; }
+.stack_gap_xs { --stack-gap: var(--space-1); }
+.stack_gap_sm { --stack-gap: var(--space-2); }
+.stack_gap_md { --stack-gap: var(--space-4); }
+.stack_gap_lg { --stack-gap: var(--space-6); }
+.stack_gap_xl { --stack-gap: var(--space-8); }
+.stack_gap_2xl { --stack-gap: var(--space-12); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CONTAINER PRIMITIVE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--container-padding, var(--space-4));
+  padding-right: var(--container-padding, var(--space-4));
+}
+
+.container_sm { max-width: var(--screen-sm); }
+.container_md { max-width: var(--screen-md); }
+.container_lg { max-width: var(--screen-lg); }
+.container_xl { max-width: var(--screen-xl); }
+.container_2xl { max-width: var(--screen-2xl); }
+.container_full { max-width: 100%; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RESPONSIVE UTILITIES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Hide/Show utilities */
+.hide { display: none; }
+.show { display: block; }
+
+@media (min-width: 640px) {
+  .hide_sm { display: none; }
+  .show_sm { display: block; }
+}
+
+@media (min-width: 768px) {
+  .hide_md { display: none; }
+  .show_md { display: block; }
+  
+  /* Grid responsive */
+  .grid_md_cols_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid_md_cols_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid_md_cols_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .hide_lg { display: none; }
+  .show_lg { display: block; }
+  
+  /* Grid responsive */
+  .grid_lg_cols_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid_lg_cols_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .grid_lg_cols_6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  
+  /* Flex responsive */
+  .flex_lg_row { flex-direction: row; }
+  .flex_lg_column { flex-direction: column; }
+}
+
+@media (min-width: 1280px) {
+  .hide_xl { display: none; }
+  .show_xl { display: block; }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   POSITION UTILITIES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+
+.inset_0 { inset: 0; }
+.top_0 { top: 0; }
+.right_0 { right: 0; }
+.bottom_0 { bottom: 0; }
+.left_0 { left: 0; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ASPECT RATIO UTILITIES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.aspect_square { aspect-ratio: 1 / 1; }
+.aspect_video { aspect-ratio: 16 / 9; }
+.aspect_4_3 { aspect-ratio: 4 / 3; }
+.aspect_21_9 { aspect-ratio: 21 / 9; }

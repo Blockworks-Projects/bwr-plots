@@ -1,0 +1,340 @@
+/**
+ * Layout System Styles
+ * ---
+ * bwr-plots/frontend/src/components/layout/styles/layout.module.css
+ * ---
+ * CSS modules for layout components
+ */
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ AppShell Styles                                                                    │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+.appShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-bg-primary);
+}
+
+.appShellHeader {
+  flex-shrink: 0;
+  height: var(--app-shell-header-height);
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  z-index: var(--layout-z-sticky, 1020);
+}
+
+.appShellBody {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.appShellSidebar {
+  flex-shrink: 0;
+  width: var(--app-shell-sidebar-width);
+  background-color: var(--color-bg-secondary);
+  overflow-y: auto;
+  transition: width 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.appShell.sidebarRight .appShellBody {
+  flex-direction: row-reverse;
+}
+
+.appShell.sidebarCollapsed .appShellSidebar {
+  width: 0;
+  overflow: hidden;
+}
+
+.appShellMain {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--color-bg-primary);
+}
+
+.appShellFooter {
+  flex-shrink: 0;
+  height: var(--app-shell-footer-height);
+  background-color: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ FlexLayout Styles                                                                  │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+.flexLayout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.flexItem {
+  overflow: hidden;
+  position: relative;
+}
+
+.resizeHandle {
+  background-color: transparent;
+  position: relative;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.resizeHandleVertical {
+  width: 8px;
+  cursor: col-resize;
+  margin: 0 -4px;
+  z-index: 10;
+}
+
+.resizeHandleVertical:hover,
+.resizeHandleVertical.resizeHandleDragging {
+  background-color: var(--color-primary);
+}
+
+.resizeHandleVertical::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background-color: var(--color-border);
+  border-radius: 1px;
+  transition: background-color 0.15s ease;
+}
+
+.resizeHandleVertical:hover::before,
+.resizeHandleVertical.resizeHandleDragging::before {
+  background-color: var(--color-primary);
+}
+
+.resizeHandleHorizontal {
+  height: 8px;
+  cursor: row-resize;
+  margin: -4px 0;
+  z-index: 10;
+}
+
+.resizeHandleHorizontal:hover,
+.resizeHandleHorizontal.resizeHandleDragging {
+  background-color: var(--color-primary);
+}
+
+.resizeHandleHorizontal::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 2px;
+  background-color: var(--color-border);
+  border-radius: 1px;
+  transition: background-color 0.15s ease;
+}
+
+.resizeHandleHorizontal:hover::before,
+.resizeHandleHorizontal.resizeHandleDragging::before {
+  background-color: var(--color-primary);
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ ScrollArea Styles                                                                  │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+.scrollArea {
+  overflow: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-light);
+}
+
+/* Scrollbar variants */
+.scrollbarThin {
+  scrollbar-width: thin;
+}
+
+.scrollbarThin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbarNone {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbarNone::-webkit-scrollbar {
+  display: none;
+}
+
+/* Auto-hide scrollbar */
+.scrollArea:not(.scrollbarVisible)::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.scrollArea.scrollbarVisible::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Panel Styles                                                                       │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panelBordered {
+  border: 1px solid var(--color-border);
+}
+
+.panelElevated {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-secondary);
+}
+
+.panelHeaderContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.panelHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelCollapseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.panelCollapseButton:hover {
+  background-color: var(--color-hover-dark);
+  color: var(--color-text-primary);
+}
+
+.panelCollapseButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.panelDescription {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+}
+
+.panelActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.panelContent {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Grid Styles                                                                        │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+.grid {
+  display: grid;
+  width: 100%;
+}
+
+.gridItem {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Responsive Utilities                                                               │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+@media (max-width: 768px) {
+  .appShellSidebar {
+    position: fixed;
+    top: var(--app-shell-header-height);
+    bottom: var(--app-shell-footer-height);
+    left: 0;
+    z-index: var(--layout-z-fixed, 1030);
+    transform: translateX(-100%);
+  }
+
+  .appShell.sidebarRight .appShellSidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  .appShell:not(.sidebarCollapsed) .appShellSidebar {
+    transform: translateX(0);
+  }
+
+  .appShellMain {
+    width: 100%;
+  }
+}

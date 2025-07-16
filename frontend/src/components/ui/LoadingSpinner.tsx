@@ -25,7 +25,7 @@ export function LoadingSpinner({
     >
       <svg
         className={clsx(
-          'animate-spin text-blue-600',
+          'animate-spin text-zinc-500',
           sizeClasses[size]
         )}
         xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +47,7 @@ export function LoadingSpinner({
         ></path>
       </svg>
       {text && (
-        <p className="mt-2 text-sm text-gray-600">{text}</p>
+        <p className="mt-2 text-sm text-zinc-400">{text}</p>
       )}
     </div>
   );

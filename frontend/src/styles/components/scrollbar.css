@@ -1,0 +1,202 @@
+/* ┌────────────────────────────────────────────────────────────────────────────────────┐
+   │ Custom Scrollbar Styles                                                            │
+   │ Themed scrollbar styling for webkit browsers                                        │
+   └────────────────────────────────────────────────────────────────────────────────────┘ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WEBKIT SCROLLBAR STYLES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --scrollbar-width: 12px;
+  --scrollbar-width-thin: 8px;
+  --scrollbar-width-overlay: 16px;
+}
+
+/* Default scrollbar */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FIREFOX SCROLLBAR STYLES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCROLLBAR VARIANTS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Thin scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: var(--scrollbar-width-thin);
+  height: var(--scrollbar-width-thin);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+/* Hidden scrollbar (but still scrollable) */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Overlay scrollbar (macOS style) */
+.scrollbar-overlay::-webkit-scrollbar {
+  width: var(--scrollbar-width-overlay);
+  height: var(--scrollbar-width-overlay);
+  background: transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border: 4px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-full);
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: content-box;
+}
+
+[data-theme="dark"] .scrollbar-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  background-clip: content-box;
+}
+
+[data-theme="dark"] .scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: content-box;
+}
+
+/* Purple themed scrollbar */
+.scrollbar-purple::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-color: var(--scrollbar-track);
+}
+
+.scrollbar-purple::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-hover);
+}
+
+.scrollbar-purple {
+  scrollbar-color: var(--color-primary) var(--scrollbar-track);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCROLLBAR UTILITIES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Smooth scrolling */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Scroll snapping */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.scroll-snap-y {
+  scroll-snap-type: y mandatory;
+}
+
+.scroll-snap-both {
+  scroll-snap-type: both mandatory;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+.scroll-snap-center {
+  scroll-snap-align: center;
+}
+
+.scroll-snap-end {
+  scroll-snap-align: end;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CUSTOM SCROLL CONTAINERS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Perfect scrollbar emulation */
+.scroll-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-content {
+  overflow-x: auto;
+  overflow-y: auto;
+  height: 100%;
+  padding-right: var(--scrollbar-width);
+  margin-right: calc(-1 * var(--scrollbar-width));
+}
+
+/* Hide scrollbar on hover for overlay effect */
+.scroll-container-hover::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.scroll-container-hover:hover::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PERFORMANCE OPTIMIZATIONS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Enable hardware acceleration for smooth scrolling */
+.scroll-gpu {
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+/* Contain layout and style for better performance */
+.scroll-contain {
+  contain: layout style;
+}
+
+/* Optimize scrolling for touch devices */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

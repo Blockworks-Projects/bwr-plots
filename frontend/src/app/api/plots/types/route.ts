@@ -4,67 +4,67 @@ export async function GET() {
   try {
     const plotTypes = [
       {
-        type: 'line',
-        name: 'Line Chart',
-        description: 'Best for showing trends over time',
+        type: 'scatter',
+        name: 'Scatter/Line Plot',
+        description: 'Show relationships between variables or trends over time',
         required_columns: ['x', 'y'],
-        optional_columns: ['color'],
+        optional_columns: ['color', 'size'],
         supports_time_series: true,
         icon: '📈'
       },
       {
+        type: 'metric_share_area',
+        name: 'Metric Share Area',
+        description: 'Show percentage composition over time',
+        required_columns: ['date'],
+        optional_columns: [],
+        supports_time_series: true,
+        icon: '📊'
+      },
+      {
         type: 'bar',
         name: 'Bar Chart', 
-        description: 'Best for comparing categories',
+        description: 'Compare values across categories',
         required_columns: ['x', 'y'],
         optional_columns: ['color'],
         supports_time_series: false,
         icon: '📊'
       },
       {
-        type: 'scatter',
-        name: 'Scatter Plot',
-        description: 'Best for showing relationships between variables',
-        required_columns: ['x', 'y'],
-        optional_columns: ['color', 'size'],
-        supports_time_series: false,
-        icon: '⚬'
-      },
-      {
-        type: 'area',
-        name: 'Area Chart',
-        description: 'Best for showing cumulative data over time',
-        required_columns: ['x', 'y'],
+        type: 'horizontal_bar',
+        name: 'Horizontal Bar Chart',
+        description: 'Compare values with horizontal bars - great for long labels',
+        required_columns: ['category', 'value'],
         optional_columns: ['color'],
-        supports_time_series: true,
-        icon: '🏔️'
+        supports_time_series: false,
+        icon: '📊'
       },
       {
-        type: 'histogram',
-        name: 'Histogram',
-        description: 'Best for showing distribution of a single variable',
+        type: 'multi_bar',
+        name: 'Multi-Bar Chart',
+        description: 'Compare multiple series across categories',
         required_columns: ['x'],
         optional_columns: ['color'],
-        supports_time_series: false,
+        supports_time_series: true,
         icon: '📊'
       },
       {
-        type: 'box',
-        name: 'Box Plot',
-        description: 'Best for showing statistical distribution',
-        required_columns: ['y'],
-        optional_columns: ['x', 'color'],
-        supports_time_series: false,
-        icon: '📦'
+        type: 'stacked_bar',
+        name: 'Stacked Bar Chart',
+        description: 'Show composition of totals across categories',
+        required_columns: ['x'],
+        optional_columns: [],
+        supports_time_series: true,
+        icon: '📊'
       },
       {
-        type: 'heatmap',
-        name: 'Heatmap',
-        description: 'Best for showing relationships in 2D data',
-        required_columns: ['x', 'y', 'z'],
+        type: 'table',
+        name: 'Data Table',
+        description: 'Display data in a formatted table',
+        required_columns: [],
         optional_columns: [],
         supports_time_series: false,
-        icon: '🔥'
+        icon: '📋'
       }
     ];
 

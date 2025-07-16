@@ -40,7 +40,7 @@ Simple test runner script that:
    cd backend
    python main.py
    ```
-   The server should be running on `http://localhost:8000`
+   The server should be running on `http://localhost:8005`
 
 2. **Install Required Packages** (if not already installed)
    ```bash
@@ -134,7 +134,7 @@ If specific tests fail, check:
 1. Backend server logs for errors
 2. File permissions for upload directory
 3. Python environment and package versions
-4. Network connectivity to localhost:8000
+4. Network connectivity to localhost:8005
 
 ## Integration with Refactor Plan
 

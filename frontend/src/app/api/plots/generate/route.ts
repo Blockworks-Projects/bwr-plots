@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 async function processPythonScript(script: string, args: any): Promise<any> {
   return new Promise((resolve, reject) => {
     const pythonPath = process.env.PYTHON_PATH || 'python';
-    const utilsPath = join(process.cwd(), 'frontend', 'utils', `${script}.py`);
+    const utilsPath = join(process.cwd(), 'utils', `${script}.py`);
     
     console.log(`[PLOT_GENERATION] Executing: ${pythonPath} ${utilsPath}`);
     console.log(`[PLOT_GENERATION] Arguments:`, JSON.stringify(args));

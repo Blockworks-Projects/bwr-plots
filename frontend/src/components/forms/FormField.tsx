@@ -53,7 +53,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     const baseInputClasses = `
       block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 
       shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 
-      focus:ring-2 focus:ring-inset focus:ring-blue-600 
+      focus:ring-2 focus:ring-inset focus:ring-zinc-600 
       sm:text-sm sm:leading-6 transition-colors
       ${error ? 'ring-red-300 focus:ring-red-600' : ''}
       ${props.disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}
@@ -101,7 +101,7 @@ const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
     const baseSelectClasses = `
       block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 
       shadow-sm ring-1 ring-inset ring-gray-300 
-      focus:ring-2 focus:ring-inset focus:ring-blue-600 
+      focus:ring-2 focus:ring-inset focus:ring-zinc-600 
       sm:text-sm sm:leading-6 transition-colors
       ${error ? 'ring-red-300 focus:ring-red-600' : ''}
       ${props.disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}
@@ -160,7 +160,7 @@ const TextareaField = forwardRef<HTMLTextAreaElement, TextareaFieldProps>(
     const baseTextareaClasses = `
       block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 
       shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 
-      focus:ring-2 focus:ring-inset focus:ring-blue-600 
+      focus:ring-2 focus:ring-inset focus:ring-zinc-600 
       sm:text-sm sm:leading-6 transition-colors resize-vertical
       ${error ? 'ring-red-300 focus:ring-red-600' : ''}
       ${props.disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}
@@ -216,7 +216,7 @@ const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(
               type="checkbox"
               aria-describedby={error ? `${id}-error` : helperText ? `${id}-description` : undefined}
               aria-invalid={error ? 'true' : 'false'}
-              className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 transition-colors ${
+              className={`h-4 w-4 rounded border-gray-300 text-zinc-600 focus:ring-zinc-600 transition-colors ${
                 error ? 'border-red-300' : ''
               } ${props.disabled ? 'cursor-not-allowed' : ''}`}
               {...props}
@@ -270,7 +270,7 @@ const RadioField = forwardRef<HTMLInputElement, RadioFieldProps>(
                     disabled={option.disabled || props.disabled}
                     aria-describedby={error ? `${id}-error` : helperText ? `${id}-description` : undefined}
                     aria-invalid={error ? 'true' : 'false'}
-                    className={`h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600 transition-colors ${
+                    className={`h-4 w-4 border-gray-300 text-zinc-600 focus:ring-zinc-600 transition-colors ${
                       error ? 'border-red-300' : ''
                     } ${option.disabled || props.disabled ? 'cursor-not-allowed' : ''}`}
                     {...props}

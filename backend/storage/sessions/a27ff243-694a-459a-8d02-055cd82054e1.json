@@ -1,0 +1,22 @@
+{
+  "id": "a27ff243-694a-459a-8d02-055cd82054e1",
+  "created_at": "2025-07-03T14:04:47.799950",
+  "last_accessed": "2025-07-03T14:04:47.802090",
+  "original_filename": "multi_time_series_test.csv",
+  "file_path": null,
+  "columns": [
+    "date",
+    "uniswap",
+    "aave",
+    "fluid"
+  ],
+  "data_types": {
+    "date": "object",
+    "uniswap": "int64",
+    "aave": "float64",
+    "fluid": "float64"
+  },
+  "row_count": 1378,
+  "manipulations": [],
+  "data_path": "storage/sessions/a27ff243-694a-459a-8d02-055cd82054e1_data.parquet"
+}

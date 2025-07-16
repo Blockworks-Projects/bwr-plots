@@ -388,15 +388,16 @@ export function usePlotGeneration(): UsePlotGenerationReturn {
 function getRequiredFields(plotType: PlotType): string[] {
   switch (plotType) {
     case 'time_series':
-      return ['x_column', 'y_column'];
+      return ['x_column'];  // y_column is optional - will plot all numeric columns
     case 'scatter':
-      return ['x_column', 'y_column'];
+      return ['x_column'];  // y_column is optional - will plot all numeric columns
     case 'bar':
     case 'horizontal_bar':
       return ['x_column', 'y_column'];
     case 'line':
+      return ['x_column'];  // y_column is optional - will plot all numeric columns
     case 'area':
-      return ['x_column', 'y_column'];
+      return ['x_column'];  // y_column is optional - will plot all numeric columns
     case 'histogram':
       return ['x_column'];
     default:

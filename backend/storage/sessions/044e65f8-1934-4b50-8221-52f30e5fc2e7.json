@@ -1,0 +1,18 @@
+{
+  "id": "044e65f8-1934-4b50-8221-52f30e5fc2e7",
+  "created_at": "2025-07-03T14:00:02.594794",
+  "last_accessed": "2025-07-03T14:00:03.277934",
+  "original_filename": "test.csv",
+  "file_path": null,
+  "columns": [
+    "name",
+    "value"
+  ],
+  "data_types": {
+    "name": "object",
+    "value": "int64"
+  },
+  "row_count": 2,
+  "manipulations": [],
+  "data_path": "storage/sessions/044e65f8-1934-4b50-8221-52f30e5fc2e7_data.parquet"
+}
