@@ -15,5 +15,18 @@ dependencies = [
   "termcolor>=2.5.0",
 ]
 
+[dependency-groups]
+test = [
+  "pytest>=8.3.2",
+]
+lint = [
+  "ruff>=0.6.9",
+]
+dev = [
+  "build>=1.2.2",
+  { include-group = "test" },
+  { include-group = "lint" },
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/bwr_plots"]
