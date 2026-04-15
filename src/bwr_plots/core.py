@@ -21,7 +21,6 @@ import mimetypes
 from importlib import resources as importlib_resources
 
 # --- Relative Imports ---
-from ._assets import asset as package_asset
 from .config import get_preset_config
 from .utils import (
     deep_merge_dicts,
@@ -43,6 +42,13 @@ from .charts.multi_bar import _add_multi_bar_traces
 from .charts.stacked_bar import _add_stacked_bar_traces
 from .charts.pie import _add_pie_traces
 from .charts.point import _add_point_traces
+
+
+def _package_asset(name: str):
+    normalized = name.strip().lstrip("/")
+    if normalized.startswith("brand-assets/"):
+        normalized = normalized.split("/", 1)[1]
+    return importlib_resources.files("bwr_plots").joinpath("brand-assets", normalized)
 
 
 # Utility function to generate safe filenames from titles
@@ -564,7 +570,7 @@ class BWRPlots:
 
             if img_rel_path.startswith("brand-assets/"):
                 try:
-                    res = package_asset(img_rel_path)
+                    res = _package_asset(img_rel_path)
                     resource_path = str(res)
                     image_bytes = res.read_bytes()
                 except Exception:
@@ -650,7 +656,7 @@ class BWRPlots:
 
             if img_rel_path.startswith("brand-assets/"):
                 try:
-                    res = package_asset(img_rel_path)
+                    res = _package_asset(img_rel_path)
                     image_bytes = res.read_bytes()
                     mime_type, _ = mimetypes.guess_type(str(res))
                 except Exception:
