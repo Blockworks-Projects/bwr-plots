@@ -1,0 +1,17 @@
+Canonical package areas:
+- api/: external surface
+- cli/: entrypoints
+- config/: presets/defaults
+- platform/: shared mechanics
+- features/: chart, layer, and tabular-input slices
+
+Authoring defaults:
+- New chart: add one slice under features/charts/<chart> and one targeted test
+- New reusable visual capability: add one slice under features/layers/<layer>
+- Avoid central dispatch edits; rely on registry autodiscovery
+- Prefer explicit, local logic over hidden indirection
+
+Primary docs:
+- docs/ARCHITECTURE.md
+- AGENTS.md
+- .agents/skills/add-new-chart/SKILL.md

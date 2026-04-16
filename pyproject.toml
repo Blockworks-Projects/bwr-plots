@@ -15,6 +15,9 @@ dependencies = [
   "termcolor>=2.5.0",
 ]
 
+[project.scripts]
+bwr-plots = "bwr_plots.cli:main"
+
 [dependency-groups]
 test = [
   "pytest>=8.3.2",

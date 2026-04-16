@@ -1,56 +1,41 @@
-from .api import (
-    ChartArtifact,
-    ChartSpec,
-    LayerSpec,
+from .legacy import (
     PlotOptions,
     PlotType,
     generate_plot,
     generate_plot_from_csv_bytes,
+    preprocess_plot_data,
+    validate_plot_data,
+)
+from .public import (
+    ChartArtifact,
+    ChartSpec,
+    LayerSpec,
     get_chart_metadata,
     get_chart_spec_type,
     list_chart_types,
     make_chart_spec,
     make_layer_spec,
-    preprocess_plot_data,
     render_chart,
     render_chart_artifact,
     render_plot_html,
-    validate_plot_data,
 )
-from .config import PRESET_CONFIGS, get_preset_config
-from .core import BWRPlots, round_and_align_dates, save_plot_image
-from .preprocessing import (
-    preprocess_dataframe,
-    analyze_dataframe,
-    validate_categorical_chart_data,
-)
-
-__version__ = "0.2.1"
 
 __all__ = [
-    "BWRPlots",
     "ChartArtifact",
     "ChartSpec",
     "LayerSpec",
     "PlotOptions",
     "PlotType",
-    "PRESET_CONFIGS",
-    "analyze_dataframe",
     "generate_plot",
     "generate_plot_from_csv_bytes",
     "get_chart_metadata",
     "get_chart_spec_type",
-    "get_preset_config",
     "list_chart_types",
     "make_chart_spec",
     "make_layer_spec",
-    "preprocess_dataframe",
     "preprocess_plot_data",
     "render_chart",
     "render_chart_artifact",
     "render_plot_html",
-    "round_and_align_dates",
-    "save_plot_image",
-    "validate_categorical_chart_data",
     "validate_plot_data",
 ]
