@@ -18,12 +18,12 @@ from .api import (
     validate_plot_data,
 )
 from .config import PRESET_CONFIGS, get_preset_config
-from .core import BWRPlots, round_and_align_dates, save_plot_image
-from .preprocessing import (
+from .features.tabular_input import (
     preprocess_dataframe,
     analyze_dataframe,
     validate_categorical_chart_data,
 )
+from .platform.plotter import BWRPlots, round_and_align_dates, save_plot_image
 
 __version__ = "0.2.1"
 

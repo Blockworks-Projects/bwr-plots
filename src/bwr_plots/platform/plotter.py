@@ -5,39 +5,39 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import plotly.graph_objects as go
 
-from .config import get_preset_config
-from .features.charts.bar.mixin import BarChartMixin
-from .features.charts.horizontal_bar.mixin import HorizontalBarChartMixin
-from .features.charts.metric_share_area.mixin import MetricShareAreaPlotMixin
-from .features.charts.multi_bar.mixin import MultiBarChartMixin
-from .features.charts.pie.mixin import PieChartMixin
-from .features.charts.point.mixin import PointPlotMixin
-from .features.charts.scatter.mixin import ScatterPlotMixin
-from .features.charts.stacked_bar.mixin import StackedBarChartMixin
-from .platform.assets import load_background_image, load_watermark, package_asset
-from .platform.axes import apply_common_axes, ensure_datetime_index, prepare_xaxis_data
-from .platform.export import (
+from ..config import get_preset_config
+from ..features.charts.bar.mixin import BarChartMixin
+from ..features.charts.horizontal_bar.mixin import HorizontalBarChartMixin
+from ..features.charts.metric_share_area.mixin import MetricShareAreaPlotMixin
+from ..features.charts.multi_bar.mixin import MultiBarChartMixin
+from ..features.charts.pie.mixin import PieChartMixin
+from ..features.charts.point.mixin import PointPlotMixin
+from ..features.charts.scatter.mixin import ScatterPlotMixin
+from ..features.charts.stacked_bar.mixin import StackedBarChartMixin
+from .assets import load_background_image, load_watermark, package_asset
+from .axes import apply_common_axes, ensure_datetime_index, prepare_xaxis_data
+from .export import (
     open_in_browser,
     round_and_align_dates as _round_and_align_dates_impl,
     save_plot_image as _save_plot_image_impl,
 )
-from .platform.layout import (
+from .layout import (
     add_watermark,
     apply_background_image,
     apply_common_layout,
     get_font_dict,
 )
-from .platform.merge import deep_merge_dicts
+from .merge import deep_merge_dicts
 
 
-def _package_asset(name: str):
+def package_plot_asset(name: str):
     return package_asset(name)
 
 
-def _generate_filename_from_title(title: str) -> str:
-    from .platform.export import generate_filename_from_title
+def generate_filename_from_title(title: str) -> str:
+    from .export import generate_filename_from_title as _generate_filename_from_title
 
-    return generate_filename_from_title(title)
+    return _generate_filename_from_title(title)
 
 
 def save_plot_image(

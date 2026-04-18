@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import plotly.graph_objects as go
 
-from ..core import BWRPlots
+from .plotter import BWRPlots
 from .registry import get_chart_spec_type, get_layer_spec_type, registry
 from .specs import ChartArtifact, ChartSpec, LayerSpec
 

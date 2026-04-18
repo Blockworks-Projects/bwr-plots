@@ -1,3 +1,5 @@
+from .axes import calculate_yaxis_grid_params
+from .merge import deep_merge_dicts
 from .registry import (
     Registry,
     get_chart_metadata,
@@ -17,6 +19,7 @@ from .rendering import (
     render_chart,
     render_chart_artifact,
 )
+from .plotter import BWRPlots, round_and_align_dates, save_plot_image
 from .specs import (
     ChartArtifact,
     ChartMetadata,
@@ -36,6 +39,9 @@ __all__ = [
     "Registry",
     "RenderContext",
     "apply_layers",
+    "BWRPlots",
+    "calculate_yaxis_grid_params",
+    "deep_merge_dicts",
     "get_chart_metadata",
     "get_chart_spec_type",
     "get_layer_metadata",
@@ -48,4 +54,6 @@ __all__ = [
     "register_layer",
     "render_chart",
     "render_chart_artifact",
+    "round_and_align_dates",
+    "save_plot_image",
 ]

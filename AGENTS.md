@@ -46,6 +46,49 @@ If you are changing the CLI:
 - start in [`src/bwr_plots/cli`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/cli)
 - CLI should call `api`, not reach into `features` or `platform` directly
 
+## Package Flow
+
+This package follows a strict flow model.
+
+Dependency flow:
+- `cli -> api`
+- `api -> features, platform, config`
+- `features -> platform, config`
+- `platform -> config` only if truly needed
+- `platform` must not import from `features`
+
+Implementation flow:
+- consumers and CLI entrypoints come in through `api`
+- `api` resolves the chart or layer behavior to run
+- feature-owned behavior lives in `features`
+- shared mechanics live in `platform`
+- presets and defaults live in `config`
+
+Use this as the fast routing rule:
+- new chart -> `features/charts/<chart>`
+- reusable visual feature -> `features/layers/<layer>`
+- preprocessing or validation -> `features/tabular_input`
+- shared mechanical helper -> `platform`
+- package-facing import/export surface -> `api`
+- CLI behavior -> `cli`
+
+## Allowed Root-Level Exceptions
+
+The package is centered on `api`, `cli`, `config`, `platform`, and `features`, but a few root-level items are intentional exceptions:
+
+- [`src/bwr_plots/__init__.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/__init__.py): root public re-export surface
+- [`src/bwr_plots/platform/plotter.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/platform/plotter.py): thin `BWRPlots` facade and public helper wrappers
+- [`src/bwr_plots/preprocessing.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/preprocessing.py): compatibility shim to `features/tabular_input`
+- [`src/bwr_plots/utils.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/utils.py): compatibility shim to `platform`
+- [`src/bwr_plots/brand-assets`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/brand-assets): packaged runtime assets
+
+These are not normal architecture targets for new work.
+
+Rules:
+- put new tabular-input behavior in `features/tabular_input`
+- put new shared helpers in `platform`
+- keep `platform/plotter.py` as the only home of the `BWRPlots` facade
+
 ## Package Map
 
 ### `src/bwr_plots/api`
@@ -161,9 +204,9 @@ Use a layer when the feature could apply to multiple charts:
 
 Do not duplicate the same post-render behavior in multiple chart slices if it can live as one layer.
 
-## `core.py` Rule
+## Plotter Facade Rule
 
-[`src/bwr_plots/core.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/core.py) is a thin facade only.
+[`src/bwr_plots/platform/plotter.py`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/platform/plotter.py) is the thin `BWRPlots` facade.
 
 It may contain:
 - shared wrapper methods
@@ -172,7 +215,7 @@ It may contain:
 
 It must not become a monolith again.
 
-If you are tempted to add a large block of chart logic to `core.py`:
+If you are tempted to add a large block of chart logic to the plotter facade:
 - stop
 - move it into the owning chart slice or a platform helper instead
 
@@ -260,6 +303,5 @@ python3 -m venv /tmp/bwr-plots-smoke
 Keep these aligned with reality:
 - [`README.md`](/Users/daniel/Developer/zz_other/bwr-plots/README.md)
 - [`docs/ARCHITECTURE.md`](/Users/daniel/Developer/zz_other/bwr-plots/docs/ARCHITECTURE.md)
-- [`docs/llms.txt`](/Users/daniel/Developer/zz_other/bwr-plots/docs/llms.txt)
 
 When you add a chart, layer, or new developer workflow, update the docs that explain where that work now lives.
