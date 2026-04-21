@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from bwr_plots import (
     BWRPlots,
+    ColumnFormatSpec,
     analyze_dataframe,
     preprocess_dataframe,
+    render_table_html,
     round_and_align_dates,
     save_plot_image,
 )
@@ -17,6 +19,8 @@ def test_root_public_exports_remain_importable() -> None:
     assert analyze_dataframe is not None
     assert round_and_align_dates is not None
     assert save_plot_image is not None
+    assert render_table_html is not None
+    assert ColumnFormatSpec is not None
 
 
 def test_tabular_input_exports_expected_symbols() -> None:

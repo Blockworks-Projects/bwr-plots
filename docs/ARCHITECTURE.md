@@ -1,8 +1,9 @@
 # Architecture
 
-`bwr-plots` is a self-contained, registry-driven plotting package built around one core goal:
+`bwr-plots` is a self-contained package for branded charts and tables built around one core goal:
 
 - make it easy to render branded charts
+- make it easy to render branded tables
 - make it easy to extend the package with new chart types or reusable visual features
 - keep ownership local so a developer or coding agent can find the right place to change code quickly
 
@@ -21,6 +22,7 @@ The architecture is intentionally explicit. Most normal feature work should stay
 Use the smallest valid placement that keeps ownership obvious.
 
 - chart behavior -> chart slice under `features/charts`
+- table rendering behavior -> `features/tables`
 - reusable visual feature -> layer slice under `features/layers`
 - tabular input prep and validation -> `features/tabular_input`
 - shared mechanics -> `platform`
@@ -34,6 +36,7 @@ Use this routing table before creating or editing files:
 | If you are adding... | Put it in... |
 | --- | --- |
 | New chart behavior | `features/charts/<chart>/service.py` and optional `mixin.py` |
+| New branded table rendering behavior | `features/tables/` |
 | New reusable post-render capability | `features/layers/<layer>/` |
 | New dataframe/file preprocessing or validation | `features/tabular_input/` |
 | New shared mechanical helper | `platform/` |
@@ -131,6 +134,7 @@ Purpose:
 Owns:
 - charts
 - layers
+- branded table rendering
 - tabular input preparation and validation
 
 This is where most product behavior belongs.
@@ -200,6 +204,19 @@ This area owns:
 - validation tied to tabular chart preparation
 
 It is the right place for chart-data preparation rules, not `platform`.
+
+### Table Slice
+
+Standalone table rendering lives in:
+
+`src/bwr_plots/features/tables/`
+
+This area owns:
+- Great Tables integration
+- table-specific formatting and label normalization
+- branded HTML artifact assembly for standalone tables
+
+Tables are not chart kinds and do not belong in the chart registry.
 
 ## Rendering Model
 
@@ -281,6 +298,8 @@ The modern API is centered on:
 - `render_chart`
 - `render_chart_artifact`
 - `render_plot_html`
+- `render_table_html`
+- `ColumnFormatSpec`
 - `list_chart_types`
 - `get_chart_spec_type`
 - `get_chart_metadata`

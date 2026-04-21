@@ -1,11 +1,12 @@
 # bwr-plots
 
-`bwr-plots` is the canonical Blockworks chart package. It is organized around a registry-driven API and explicit package areas so new chart types and reusable visual features can be added without editing central dispatch code.
+`bwr-plots` is the canonical Blockworks package for branded charts and tables. It is organized around a registry-driven chart API plus explicit feature slices so new chart types, reusable visual features, and standalone table artifacts can be added without editing central dispatch code.
 
 ## Core model
 
 - Each chart lives in its own owned slice under [`src/bwr_plots/features/charts`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/features/charts).
 - Each reusable post-render feature lives in its own owned slice under [`src/bwr_plots/features/layers`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/features/layers).
+- Standalone branded table rendering lives under [`src/bwr_plots/features/tables`](/Users/daniel/Developer/bwr-plots/src/bwr_plots/features/tables).
 - Charts register themselves automatically at import time.
 - The canonical API is spec-first:
 
@@ -72,6 +73,28 @@ Primary exports from [`src/bwr_plots/__init__.py`](/Users/daniel/Developer/zz_ot
 
 Legacy helpers like `generate_plot` and `PlotOptions` still exist for transition use, but the package is designed around chart specs and registry discovery now.
 
+Table rendering is a sibling public surface:
+
+- `render_table_html`
+- `ColumnFormatSpec`
+
+Example:
+
+```python
+import pandas as pd
+
+from bwr_plots import render_table_html
+
+html = render_table_html(
+    pd.DataFrame({"ticker": ["MSTR"], "nav": [1_234_567]}),
+    title="Treasury Snapshot",
+    source_note="Blockworks Research",
+    column_formats={
+        "nav": {"kind": "currency", "notation": "compact", "prefix": "$"}
+    },
+)
+```
+
 ## CLI
 
 List available charts:
@@ -91,11 +114,23 @@ uv run bwr-plots render \
   --spec-json '{"title":"CLI Chart","source":"Blockworks Research"}'
 ```
 
+Render a table:
+
+```bash
+uv run bwr-plots render-table \
+  --data ./table.csv \
+  --output-file ./table.html \
+  --title "Treasury Snapshot" \
+  --source-note "Blockworks Research" \
+  --column-formats-json '{"nav":{"kind":"currency","notation":"compact","prefix":"$"}}'
+```
+
 Default CLI contract:
 
 - chart type via `--chart`
 - structured options via `--spec-json` or `--spec-file`
 - optional layers via `--layers-json` or `--layers-file`
+- table rendering via `render-table` with `--column-formats-json` or `--column-formats-file`
 - generated HTML opens in your default browser unless you pass `--no-open`
 
 ## Install
@@ -121,6 +156,7 @@ bwr-plots = { git = "https://github.com/Blockworks-Projects/bwr-plots.git", tag 
 - [`src/bwr_plots/platform`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/platform): registry/spec contracts and shared mechanics
 - [`src/bwr_plots/features/charts`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/features/charts): per-chart slices
 - [`src/bwr_plots/features/layers`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/features/layers): reusable post-render layers
+- [`src/bwr_plots/features/tables`](/Users/daniel/Developer/bwr-plots/src/bwr_plots/features/tables): branded Great Tables rendering and artifact assembly
 - [`src/bwr_plots/features/tabular_input`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/features/tabular_input): dataframe/file preprocessing
 - [`docs/ARCHITECTURE.md`](/Users/daniel/Developer/zz_other/bwr-plots/docs/ARCHITECTURE.md): package boundaries and ownership
 - [`src/bwr_plots/brand-assets`](/Users/daniel/Developer/zz_other/bwr-plots/src/bwr_plots/brand-assets): bundled runtime assets

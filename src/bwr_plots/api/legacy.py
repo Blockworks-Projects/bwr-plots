@@ -187,18 +187,11 @@ def preprocess_plot_data(
             )
             result = processed.iloc[:, 0]
 
-    if options.sort_descending:
-        if isinstance(result, pd.DataFrame) and len(result.columns) == 1:
-            result = result.sort_values(by=result.columns[0], ascending=False)
-        elif isinstance(result, pd.Series):
-            result = result.sort_values(ascending=False)
-    elif options.sort_ascending:
-        if isinstance(result, pd.DataFrame) and len(result.columns) == 1:
-            result = result.sort_values(by=result.columns[0], ascending=True)
-        elif isinstance(result, pd.Series):
-            result = result.sort_values(ascending=True)
-
-    return result
+    return _sort_preprocessed_data(
+        result,
+        sort_descending=options.sort_descending,
+        sort_ascending=options.sort_ascending,
+    )
 
 
 def generate_plot(
@@ -226,16 +219,11 @@ def generate_plot_from_csv_bytes(
     options: PlotOptions | None = None,
     read_csv_kwargs: dict[str, Any] | None = None,
 ) -> go.Figure:
-    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else "csv"
-    buf = BytesIO(file_bytes)
-
-    if ext in ("xlsx", "xlsm", "xls"):
-        df = pd.read_excel(buf, engine="openpyxl")
-    else:
-        kwargs = {"engine": "python"}
-        if read_csv_kwargs:
-            kwargs.update(read_csv_kwargs)
-        df = pd.read_csv(buf, **kwargs)
+    df = _read_dataframe_from_bytes(
+        file_bytes,
+        filename,
+        read_csv_kwargs=read_csv_kwargs,
+    )
 
     if date_col and date_col in df.columns:
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
@@ -245,103 +233,156 @@ def generate_plot_from_csv_bytes(
 
 
 def _legacy_spec_payload(plot_type: str, opts: PlotOptions) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "kind": plot_type,
-        "preset": opts.preset,
-        "title": opts.title,
-        "subtitle": opts.subtitle,
-        "source": opts.source,
+    payload = _base_legacy_payload(plot_type, opts)
+    payload.update(_legacy_plot_overrides(plot_type, opts))
+    return {key: value for key, value in payload.items() if value is not None}
+
+
+def _base_legacy_payload(plot_type: str, opts: PlotOptions) -> dict[str, Any]:
+    return {
+        "axis_options": opts.axis_options,
+        "config_override": _legend_config_override(opts),
         "date": opts.date,
-        "prefix": opts.prefix,
-        "suffix": opts.suffix,
-        "width": opts.width,
         "height": opts.height,
+        "kind": plot_type,
+        "legend_order": opts.legend_order,
+        "prefix": opts.prefix,
+        "preset": opts.preset,
+        "series_colors": opts.series_colors,
+        "subtitle": opts.subtitle,
+        "suffix": opts.suffix,
+        "title": opts.title,
         "use_watermark": opts.use_watermark,
+        "width": opts.width,
         "x_axis_title": opts.x_axis_title,
         "y_axis_title": opts.y_axis_title,
-        "axis_options": opts.axis_options,
-        "legend_order": opts.legend_order,
-        "series_colors": opts.series_colors,
-        "config_override": _legend_config_override(opts),
+        "source": opts.source,
     }
 
-    if plot_type == "scatter":
-        payload.update(
-            xaxis_is_date=opts.xaxis_is_date,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-            fill_mode=opts.fill_mode,
-            fill_color=opts.fill_color,
-            smoothing_window=opts.smoothing_window or None,
-            auto_scale_y_values=opts.auto_scale_y_values,
-            secondary_y_data=opts.secondary_y_data,
-            secondary_y_prefix=opts.secondary_y_prefix,
-            secondary_y_suffix=opts.secondary_y_suffix,
-        )
-    elif plot_type == "metric_share_area":
-        payload.update(
-            xaxis_is_date=opts.xaxis_is_date,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-            smoothing_window=opts.smoothing_window or None,
-        )
-    elif plot_type == "bar":
-        payload.update(
-            bar_color=opts.bar_color,
-            show_legend=opts.show_legend if opts.show_legend is not None else False,
-        )
-    elif plot_type == "multi_bar":
-        payload.update(
-            xaxis_is_date=opts.xaxis_is_date,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-            colors=opts.colors,
-            scale_values=opts.scale_values,
-            show_bar_values=opts.show_bar_values,
-            tick_frequency=opts.tick_frequency,
-        )
-    elif plot_type == "stacked_bar":
-        payload.update(
-            xaxis_is_date=opts.xaxis_is_date,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-            colors=opts.colors,
-            scale_values=opts.scale_values,
-            sort_descending=opts.sort_descending,
-        )
-    elif plot_type == "horizontal_bar":
-        payload.update(
-            y_column=opts.y_column,
-            x_column=opts.x_column,
-            show_bar_values=opts.show_bar_values if opts.show_bar_values is not None else True,
-            color_positive=opts.color_positive,
-            color_negative=opts.color_negative,
-            sort_ascending=opts.sort_ascending,
-            bar_height=opts.bar_height,
-            bargap=opts.bargap,
-        )
-    elif plot_type == "pie":
-        payload.update(
-            show_values=opts.show_values,
-            text_position=opts.text_position,
-            hole_size=opts.hole_size,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-        )
-    elif plot_type == "point":
-        payload.update(
-            x_column=opts.x_column,
-            y_column=opts.y_column,
-            group_column=opts.group_column,
-            label_column=opts.label_column,
-            size_column=opts.size_column,
-            xaxis_is_date=opts.xaxis_is_date,
-            show_legend=opts.show_legend if opts.show_legend is not None else True,
-            marker_size=opts.marker_size,
-            marker_opacity=opts.marker_opacity,
-            uniform_color=opts.uniform_color or False,
-            show_trendline=opts.show_trendline or False,
-            trendline_type=opts.trendline_type or "linear",
-            trendline_color=opts.trendline_color,
-            show_r_squared=opts.show_r_squared or False,
-        )
 
-    return {key: value for key, value in payload.items() if value is not None}
+def _legacy_plot_overrides(plot_type: str, opts: PlotOptions) -> dict[str, Any]:
+    if plot_type == "scatter":
+        return {
+            "xaxis_is_date": opts.xaxis_is_date,
+            "show_legend": _show_legend(opts.show_legend, True),
+            "fill_mode": opts.fill_mode,
+            "fill_color": opts.fill_color,
+            "smoothing_window": opts.smoothing_window or None,
+            "auto_scale_y_values": opts.auto_scale_y_values,
+            "secondary_y_data": opts.secondary_y_data,
+            "secondary_y_prefix": opts.secondary_y_prefix,
+            "secondary_y_suffix": opts.secondary_y_suffix,
+        }
+    if plot_type == "metric_share_area":
+        return {
+            "xaxis_is_date": opts.xaxis_is_date,
+            "show_legend": _show_legend(opts.show_legend, True),
+            "smoothing_window": opts.smoothing_window or None,
+        }
+    if plot_type == "bar":
+        return {
+            "bar_color": opts.bar_color,
+            "show_legend": _show_legend(opts.show_legend, False),
+        }
+    if plot_type == "multi_bar":
+        return {
+            "xaxis_is_date": opts.xaxis_is_date,
+            "show_legend": _show_legend(opts.show_legend, True),
+            "colors": opts.colors,
+            "scale_values": opts.scale_values,
+            "show_bar_values": opts.show_bar_values,
+            "tick_frequency": opts.tick_frequency,
+        }
+    if plot_type == "stacked_bar":
+        return {
+            "xaxis_is_date": opts.xaxis_is_date,
+            "show_legend": _show_legend(opts.show_legend, True),
+            "colors": opts.colors,
+            "scale_values": opts.scale_values,
+            "sort_descending": opts.sort_descending,
+        }
+    if plot_type == "horizontal_bar":
+        return {
+            "y_column": opts.y_column,
+            "x_column": opts.x_column,
+            "show_bar_values": _show_legend(opts.show_bar_values, True),
+            "color_positive": opts.color_positive,
+            "color_negative": opts.color_negative,
+            "sort_ascending": opts.sort_ascending,
+            "bar_height": opts.bar_height,
+            "bargap": opts.bargap,
+        }
+    if plot_type == "pie":
+        return {
+            "show_values": opts.show_values,
+            "text_position": opts.text_position,
+            "hole_size": opts.hole_size,
+            "show_legend": _show_legend(opts.show_legend, True),
+        }
+    if plot_type == "point":
+        return {
+            "x_column": opts.x_column,
+            "y_column": opts.y_column,
+            "group_column": opts.group_column,
+            "label_column": opts.label_column,
+            "size_column": opts.size_column,
+            "xaxis_is_date": opts.xaxis_is_date,
+            "show_legend": _show_legend(opts.show_legend, True),
+            "marker_size": opts.marker_size,
+            "marker_opacity": opts.marker_opacity,
+            "uniform_color": bool(opts.uniform_color),
+            "show_trendline": bool(opts.show_trendline),
+            "trendline_type": opts.trendline_type or "linear",
+            "trendline_color": opts.trendline_color,
+            "show_r_squared": bool(opts.show_r_squared),
+        }
+    return {}
+
+
+def _sort_preprocessed_data(
+    data: pd.DataFrame | pd.Series,
+    *,
+    sort_descending: bool | None,
+    sort_ascending: bool | None,
+) -> pd.DataFrame | pd.Series:
+    if sort_descending:
+        return _sort_plot_data(data, ascending=False)
+    if sort_ascending:
+        return _sort_plot_data(data, ascending=True)
+    return data
+
+
+def _sort_plot_data(
+    data: pd.DataFrame | pd.Series,
+    *,
+    ascending: bool,
+) -> pd.DataFrame | pd.Series:
+    if isinstance(data, pd.Series):
+        return data.sort_values(ascending=ascending)
+    if len(data.columns) == 1:
+        return data.sort_values(by=data.columns[0], ascending=ascending)
+    return data
+
+
+def _read_dataframe_from_bytes(
+    file_bytes: bytes,
+    filename: str,
+    *,
+    read_csv_kwargs: dict[str, Any] | None = None,
+) -> pd.DataFrame:
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else "csv"
+    buffer = BytesIO(file_bytes)
+    if ext in {"xlsx", "xlsm", "xls"}:
+        return pd.read_excel(buffer, engine="openpyxl")
+
+    kwargs = {"engine": "python"}
+    if read_csv_kwargs:
+        kwargs.update(read_csv_kwargs)
+    return pd.read_csv(buffer, **kwargs)
+
+
+def _show_legend(value: bool | None, default: bool) -> bool:
+    return default if value is None else value
 
 
 def _legend_config_override(options: PlotOptions) -> dict[str, Any]:

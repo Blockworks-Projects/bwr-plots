@@ -10,6 +10,7 @@ from .public import (
     ChartArtifact,
     ChartSpec,
     LayerSpec,
+    ColumnFormatSpec,
     get_chart_metadata,
     get_chart_spec_type,
     list_chart_types,
@@ -18,11 +19,13 @@ from .public import (
     render_chart,
     render_chart_artifact,
     render_plot_html,
+    render_table_html,
 )
 
 __all__ = [
     "ChartArtifact",
     "ChartSpec",
+    "ColumnFormatSpec",
     "LayerSpec",
     "PlotOptions",
     "PlotType",
@@ -37,5 +40,6 @@ __all__ = [
     "render_chart",
     "render_chart_artifact",
     "render_plot_html",
+    "render_table_html",
     "validate_plot_data",
 ]

@@ -5,7 +5,7 @@ import json
 import sys
 import webbrowser
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import pandas as pd
 
@@ -14,7 +14,11 @@ from ..api import (
     list_chart_types,
     render_chart,
     render_plot_html,
+    render_table_html,
 )
+from ..api.tables import coerce_column_formats_payload
+
+JsonPayload = TypeVar("JsonPayload", dict[str, Any], list[dict[str, Any]])
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +62,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
     render_parser.set_defaults(func=_run_render)
 
+    table_parser = subparsers.add_parser(
+        "render-table",
+        help="Render a branded table from tabular data.",
+    )
+    table_parser.add_argument("--data", required=True, help="Path to CSV/XLS/XLSX input.")
+    table_parser.add_argument("--output-file", required=True, help="Output HTML path.")
+    table_parser.add_argument("--title", help="Table title.")
+    table_parser.add_argument("--subtitle", default="", help="Table subtitle.")
+    table_parser.add_argument("--source-note", default="", help="Table source note.")
+    table_parser.add_argument(
+        "--theme",
+        choices=["dark", "light"],
+        default="dark",
+        help="Artifact theme.",
+    )
+    table_parser.add_argument(
+        "--logo",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include the packaged BWR logo (default: enabled).",
+    )
+    table_parser.add_argument("--sheet", help="Excel sheet name.")
+    table_parser.add_argument(
+        "--column-formats-json",
+        help="Inline JSON object keyed by column name with format specs.",
+    )
+    table_parser.add_argument(
+        "--column-formats-file",
+        help="Path to a JSON file keyed by column name with format specs.",
+    )
+    table_parser.add_argument(
+        "--open",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Open the generated HTML in a browser (default: enabled).",
+    )
+    table_parser.set_defaults(func=_run_render_table)
+
     return parser
 
 
@@ -87,16 +129,27 @@ def _run_render(args: argparse.Namespace) -> int:
 
     fig = render_chart(df, spec_payload, layers=layers_payload)
     html = render_plot_html(fig, include_plotlyjs=args.include_plotlyjs, full_html=True)
+    _write_html_output(args.output_file, html, open_output=args.open)
+    return 0
 
-    output_path = Path(args.output_file)
-    if output_path.suffix.lower() != ".html":
-        output_path = output_path.with_suffix(".html")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(html, encoding="utf-8")
 
-    if args.open:
-        webbrowser.open(f"file://{output_path.resolve()}")
-
+def _run_render_table(args: argparse.Namespace) -> int:
+    input_path = Path(args.data)
+    dataframe = _read_table(input_path, sheet=args.sheet)
+    column_formats = _load_column_formats(
+        args.column_formats_json,
+        args.column_formats_file,
+    )
+    html = render_table_html(
+        dataframe,
+        title=args.title,
+        subtitle=args.subtitle or None,
+        source_note=args.source_note or None,
+        theme=args.theme,
+        logo=args.logo,
+        column_formats=column_formats,
+    )
+    _write_html_output(args.output_file, html, open_output=args.open)
     return 0
 
 
@@ -175,29 +228,51 @@ def _is_date_like_series(series: pd.Series) -> bool:
 
 
 def _load_json_object(inline_value: str | None, file_path: str | None) -> dict[str, Any]:
-    payload: Any = {}
-    if inline_value:
-        payload = json.loads(inline_value)
-    elif file_path:
-        payload = json.loads(Path(file_path).read_text(encoding="utf-8"))
-    if payload is None:
-        return {}
+    payload = _load_json_payload(inline_value, file_path, default={})
     if not isinstance(payload, dict):
         raise ValueError("Chart spec must be a JSON object.")
     return payload
 
 
 def _load_json_array(inline_value: str | None, file_path: str | None) -> list[dict[str, Any]]:
-    payload: Any = []
+    payload = _load_json_payload(inline_value, file_path, default=[])
+    if not isinstance(payload, list):
+        raise ValueError("Layer payload must be a JSON array.")
+    return payload
+
+
+def _load_column_formats(
+    inline_value: str | None,
+    file_path: str | None,
+) -> dict[str, Any] | None:
+    payload = _load_json_object(inline_value, file_path)
+    return coerce_column_formats_payload(payload)
+
+
+def _load_json_payload(
+    inline_value: str | None,
+    file_path: str | None,
+    *,
+    default: JsonPayload,
+) -> JsonPayload:
+    payload: Any = default
     if inline_value:
         payload = json.loads(inline_value)
     elif file_path:
         payload = json.loads(Path(file_path).read_text(encoding="utf-8"))
     if payload is None:
-        return []
-    if not isinstance(payload, list):
-        raise ValueError("Layer payload must be a JSON array.")
+        return default
     return payload
+
+
+def _write_html_output(output_file: str, html: str, *, open_output: bool) -> None:
+    output_path = Path(output_file)
+    if output_path.suffix.lower() != ".html":
+        output_path = output_path.with_suffix(".html")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(html, encoding="utf-8")
+    if open_output:
+        webbrowser.open(f"file://{output_path.resolve()}")
 
 
 if __name__ == "__main__":

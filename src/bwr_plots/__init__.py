@@ -1,6 +1,7 @@
 from .api import (
     ChartArtifact,
     ChartSpec,
+    ColumnFormatSpec,
     LayerSpec,
     PlotOptions,
     PlotType,
@@ -15,6 +16,7 @@ from .api import (
     render_chart,
     render_chart_artifact,
     render_plot_html,
+    render_table_html,
     validate_plot_data,
 )
 from .config import PRESET_CONFIGS, get_preset_config
@@ -31,6 +33,7 @@ __all__ = [
     "BWRPlots",
     "ChartArtifact",
     "ChartSpec",
+    "ColumnFormatSpec",
     "LayerSpec",
     "PlotOptions",
     "PlotType",
@@ -49,6 +52,7 @@ __all__ = [
     "render_chart",
     "render_chart_artifact",
     "render_plot_html",
+    "render_table_html",
     "round_and_align_dates",
     "save_plot_image",
     "validate_categorical_chart_data",

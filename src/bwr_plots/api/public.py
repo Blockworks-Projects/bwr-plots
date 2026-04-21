@@ -4,6 +4,7 @@ from typing import Any
 
 import plotly.graph_objects as go
 
+from .tables import ColumnFormatSpec, render_table_html
 from ..platform.html import (
     get_primary_font_family,
     inject_font_css,
@@ -54,6 +55,7 @@ def render_plot_html(
 __all__ = [
     "ChartArtifact",
     "ChartSpec",
+    "ColumnFormatSpec",
     "LayerSpec",
     "get_chart_metadata",
     "get_chart_spec_type",
@@ -63,4 +65,5 @@ __all__ = [
     "render_chart",
     "render_chart_artifact",
     "render_plot_html",
+    "render_table_html",
 ]
