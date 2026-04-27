@@ -15,4 +15,4 @@ from .preprocessing import (
     validate_categorical_chart_data,
 )
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
