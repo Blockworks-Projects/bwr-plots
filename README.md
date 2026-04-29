@@ -145,7 +145,7 @@ Consume from another repo with a pinned git tag:
 
 ```toml
 [tool.uv.sources]
-bwr-plots = { git = "https://github.com/Blockworks-Projects/bwr-plots.git", tag = "v0.2.2" }
+bwr-plots = { git = "https://github.com/Blockworks-Projects/bwr-plots.git", tag = "v0.2.4" }
 ```
 
 ## Repo layout

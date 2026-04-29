@@ -9,6 +9,7 @@ venv/
 ENV/
 
 # IDE files
+.DS_Store
 .vscode/
 .idea/
 .pytest_cache/

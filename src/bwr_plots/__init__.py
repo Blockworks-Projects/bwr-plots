@@ -27,7 +27,7 @@ from .features.tabular_input import (
 )
 from .platform.plotter import BWRPlots, round_and_align_dates, save_plot_image
 
-__version__ = "0.2.2"
+__version__ = "0.2.4"
 
 __all__ = [
     "BWRPlots",
