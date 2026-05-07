@@ -88,6 +88,29 @@ def test_registry_auto_discovers_all_default_chart_modules() -> None:
     ]
 
 
+def test_date_axis_emits_range_aware_tickformatstops() -> None:
+    # Object-dtype ISO string index — verifies auto-conversion and that the
+    # opinionated range-aware tick formatter is wired onto the date axis.
+    iso_index = [f"2024-{m:02d}-15T00:00:00.000000" for m in range(1, 13)]
+    data = pd.DataFrame({"value": list(range(12))}, index=iso_index)
+
+    fig = render_chart(data, {"kind": "stacked_bar", "title": "ISO"})
+
+    assert fig.layout.xaxis.type == "date"
+    stops = fig.layout.xaxis.tickformatstops
+    assert stops is not None and len(stops) == 3
+    formats = [stop.value for stop in stops]
+    assert "%d %b %y" in formats
+    assert "%b %y" in formats
+
+
+def test_category_axis_omits_tickformatstops() -> None:
+    fig = render_chart(_category_data(), {"kind": "stacked_bar", "xaxis_is_date": False})
+    assert fig.layout.xaxis.type == "category"
+    # Category axes should not carry the date-only stops payload.
+    assert not fig.layout.xaxis.tickformatstops
+
+
 def test_highlight_band_layer_composes_with_scatter_chart() -> None:
     fig = render_chart(
         _scatter_data(),

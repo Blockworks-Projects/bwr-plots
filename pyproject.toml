@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bwr-plots"
-version = "0.2.5"
+version = "0.2.6"
 description = "Reusable Blockworks plotting helpers"
 requires-python = ">=3.11"
 dependencies = [

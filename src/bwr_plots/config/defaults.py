@@ -145,6 +145,17 @@ DEFAULT_BWR_CONFIG = {
         "x_ticklen": 6,
         "x_nticks": 15,
         "x_tickformat": "%d %b %y",
+        # Range-aware date tick formatting for `xaxis_type == "date"`.
+        # dtick boundaries are in milliseconds; Plotly picks the matching
+        # format based on the auto-selected tick spacing.
+        #   <  1 day    →  time-of-day + date
+        #   1 day–~1 mo →  "11 Jan 24"
+        #   >  ~1 mo    →  "Jan 24"
+        "x_tickformatstops": [
+            {"dtickrange": [None, 86_400_000], "value": "%H:%M\n%d %b %y"},
+            {"dtickrange": [86_400_000, 86_400_000 * 31], "value": "%d %b %y"},
+            {"dtickrange": [86_400_000 * 31, None], "value": "%b %y"},
+        ],
         "y_primary_title_text": "",
         "y_primary_tickformat": ",d",
         "y_primary_ticksuffix": "",

@@ -200,6 +200,11 @@ def apply_common_axes(
 
     xaxis_type = merged_options.get("x_type", "category" if xaxis_is_date is False else "date")
     xaxis_tickformat = "" if xaxis_type == "category" else merged_options.get("x_tickformat", cfg_axes["x_tickformat"])
+    xaxis_tickformatstops = (
+        None
+        if xaxis_type != "date"
+        else merged_options.get("x_tickformatstops", cfg_axes.get("x_tickformatstops"))
+    )
 
     fig.update_xaxes(
         type=xaxis_type,
@@ -217,6 +222,7 @@ def apply_common_axes(
         ticklabelstandoff=0,
         nticks=merged_options["x_nticks"],
         tickformat=xaxis_tickformat,
+        tickformatstops=xaxis_tickformatstops,
         tickfont=plotter._get_font_dict("tick"),
         zeroline=False,
         zerolinewidth=0,
