@@ -218,3 +218,24 @@ def test_render_table_html_keeps_title_for_table_at_dense_boundary() -> None:
     assert "Hyperliquid Validator Stats" in html
     assert "Top validators by HYPE staked" in html
     assert 'data-bwr-table-layout="dense"' in html
+
+
+def test_render_table_html_cells_allow_word_break() -> None:
+    # 42-char hex addresses would push the table past the 1920px shell at
+    # the previous `white-space: nowrap` cell rule. The cell CSS should now
+    # allow wrapping at whitespace and mid-token for long contiguous strings,
+    # keeping the table inside the shell.
+    dataframe = pd.DataFrame(
+        {
+            "validator": ["TWStaking"],
+            "consensus": ["0x9f1b7fae54be07f4fee34eb1aacb39a1f7b6fc92"],
+            "operator": ["0x5c38ff8ca21234abcd5678ef9012345678901234"],
+        }
+    )
+
+    html = render_table_html(dataframe, title="Word Break Smoke")
+
+    assert "white-space: normal !important" in html
+    assert "word-break: break-word !important" in html
+    assert "overflow-wrap: anywhere !important" in html
+    assert "white-space: nowrap !important; padding:" not in html

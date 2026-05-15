@@ -134,7 +134,9 @@ def _artifact_table_css(
         "[id] table { width: 100% !important; table-layout: auto !important; }",
         "[id] .gt_heading, [id] .gt_sourcenotes { display: none !important; }",
         "[id] .gt_row { text-align: center !important; font-family: Arial, sans-serif !important; }",
-        "[id] .gt_row td { white-space: nowrap !important; padding: "
+        "[id] .gt_row td { white-space: normal !important; "
+        "word-break: break-word !important; overflow-wrap: anywhere !important; "
+        "padding: "
         + cell_padding
         + " !important; background-color: "
         + background
