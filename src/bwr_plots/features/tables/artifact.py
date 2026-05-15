@@ -134,7 +134,10 @@ def _artifact_table_css(
         "[id] table { width: 100% !important; table-layout: auto !important; }",
         "[id] .gt_heading, [id] .gt_sourcenotes { display: none !important; }",
         "[id] .gt_row { text-align: center !important; font-family: Arial, sans-serif !important; }",
-        "[id] .gt_row td { white-space: normal !important; "
+        # Great Tables emits body cells as `<td class="gt_row ...">`, so the
+        # cell rule must target `td.gt_row` directly. A `.gt_row td` descendant
+        # selector silently never matches.
+        "[id] td.gt_row { white-space: normal !important; "
         "word-break: break-word !important; overflow-wrap: anywhere !important; "
         "padding: "
         + cell_padding

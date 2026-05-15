@@ -221,10 +221,10 @@ def test_render_table_html_keeps_title_for_table_at_dense_boundary() -> None:
 
 
 def test_render_table_html_cells_allow_word_break() -> None:
-    # 42-char hex addresses would push the table past the 1920px shell at
-    # the previous `white-space: nowrap` cell rule. The cell CSS should now
-    # allow wrapping at whitespace and mid-token for long contiguous strings,
-    # keeping the table inside the shell.
+    # 42-char hex addresses would push the table past the 1920px shell if cells
+    # cannot break mid-token. The cell CSS rule must (a) actually target the
+    # element Great Tables emits — `<td class="gt_row …">`, NOT a `td` nested
+    # inside a `.gt_row` — and (b) declare wrap-friendly properties.
     dataframe = pd.DataFrame(
         {
             "validator": ["TWStaking"],
@@ -235,7 +235,10 @@ def test_render_table_html_cells_allow_word_break() -> None:
 
     html = render_table_html(dataframe, title="Word Break Smoke")
 
-    assert "white-space: normal !important" in html
+    # The selector must target td.gt_row directly. ".gt_row td" silently fails
+    # because no descendant td exists inside the cell.
+    assert "td.gt_row { white-space: normal !important;" in html
     assert "word-break: break-word !important" in html
     assert "overflow-wrap: anywhere !important" in html
-    assert "white-space: nowrap !important; padding:" not in html
+    # And the rule must have a matching element to apply to.
+    assert '<td class="gt_row' in html
