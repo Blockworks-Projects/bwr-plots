@@ -122,7 +122,7 @@ def test_render_table_html_preserves_boolean_cells_as_text() -> None:
     assert ">0<" not in html
 
 
-def test_render_table_html_uses_dense_layout_before_failing() -> None:
+def test_render_table_html_uses_dense_layout_for_wide_table() -> None:
     html = render_table_html(
         pd.DataFrame(
             {
@@ -176,7 +176,7 @@ def test_render_table_html_uses_dense_layout_before_failing() -> None:
     assert 'data-bwr-table-layout="dense"' in html
 
 
-def test_render_table_html_errors_when_still_too_wide_after_formatting() -> None:
+def test_render_table_html_still_renders_dense_when_extremely_wide() -> None:
     dataframe = pd.DataFrame(
         {
             "ridiculously_long_column_name_number_1": ["x" * 40],
@@ -187,5 +187,34 @@ def test_render_table_html_errors_when_still_too_wide_after_formatting() -> None
         }
     )
 
-    with pytest.raises(ValueError, match="too wide to render cleanly"):
-        render_table_html(dataframe, title="Too Wide Table")
+    html = render_table_html(dataframe, title="Too Wide Table")
+
+    assert 'data-bwr-table-layout="dense"' in html
+    assert "Too Wide Table" in html
+
+
+def test_render_table_html_keeps_title_for_table_at_dense_boundary() -> None:
+    # 8-column shape mirroring the analytics-mcp validator artifact that
+    # previously refused to render once a title/subtitle was supplied.
+    dataframe = pd.DataFrame(
+        {
+            "validator": ["Bitwise Onchain Solutions x FalconX"],
+            "stake_hype": [56_782_776.0],
+            "commission_pct": [3.0],
+            "apr_day_pct": [2.18],
+            "apr_week_pct": [2.18],
+            "apr_month_pct": [2.18],
+            "uptime_30d_pct": [100.0],
+            "jailed": ["No"],
+        }
+    )
+
+    html = render_table_html(
+        dataframe,
+        title="Hyperliquid Validator Stats — APR & Commission",
+        subtitle="Top validators by HYPE staked",
+    )
+
+    assert "Hyperliquid Validator Stats" in html
+    assert "Top validators by HYPE staked" in html
+    assert 'data-bwr-table-layout="dense"' in html

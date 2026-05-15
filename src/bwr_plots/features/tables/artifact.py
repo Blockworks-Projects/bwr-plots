@@ -29,8 +29,6 @@ def render_table_html(
 ) -> str:
     table_html, layout_mode = _render_gt_artifact_table(
         dataframe,
-        title=title,
-        subtitle=subtitle,
         theme=theme,
         column_formats=column_formats,
     )
@@ -48,17 +46,11 @@ def render_table_html(
 def _render_gt_artifact_table(
     dataframe: pd.DataFrame,
     *,
-    title: str | None,
-    subtitle: str | None,
     theme: TableTheme,
     column_formats: Mapping[str, ColumnFormatSpec | Mapping[str, Any]] | None,
 ) -> tuple[str, ArtifactLayoutMode]:
     display_df = prettify_column_labels(apply_column_formats(dataframe, column_formats))
-    layout_mode = select_artifact_layout_mode(
-        display_df,
-        title=title,
-        subtitle=subtitle,
-    )
+    layout_mode = select_artifact_layout_mode(display_df)
     table = bwr_table_from_df(
         display_df,
         title=None,

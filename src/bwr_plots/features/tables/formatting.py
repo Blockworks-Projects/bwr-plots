@@ -15,9 +15,6 @@ _COMPACT_SUFFIXES: tuple[tuple[float, str], ...] = (
     (1_000_000.0, "M"),
     (1_000.0, "K"),
 )
-TOO_WIDE_MESSAGE = (
-    "table is too wide to render cleanly after formatting; reduce columns or values"
-)
 _ACRONYM_TOKENS = {
     "usd",
     "tvl",
@@ -94,20 +91,10 @@ def prettify_column_labels(dataframe: pd.DataFrame) -> pd.DataFrame:
     return dataframe.rename(columns=renamed)
 
 
-def select_artifact_layout_mode(
-    display_df: pd.DataFrame,
-    *,
-    title: str | None,
-    subtitle: str | None,
-) -> ArtifactLayoutMode:
-    score = _estimate_column_width_score(display_df)
-    score += max(len((title or "").strip()) // 18, 0)
-    score += max(len((subtitle or "").strip()) // 24, 0)
-    if score <= 120:
+def select_artifact_layout_mode(display_df: pd.DataFrame) -> ArtifactLayoutMode:
+    if _estimate_column_width_score(display_df) <= 120:
         return "standard"
-    if score <= 148:
-        return "dense"
-    raise ValueError(TOO_WIDE_MESSAGE)
+    return "dense"
 
 
 def _is_missing(value: Any) -> bool:
@@ -215,7 +202,6 @@ def _estimate_column_width_score(display_df: pd.DataFrame) -> int:
 
 
 __all__ = [
-    "TOO_WIDE_MESSAGE",
     "apply_column_formats",
     "coerce_column_format_spec",
     "normalized_column_formats",
