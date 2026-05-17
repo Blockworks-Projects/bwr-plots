@@ -36,19 +36,23 @@ def _add_bar_traces(
         return
 
     # --- Color handling ---
-    palette = cfg_colors.get("default_palette", ["#5637cd"]) if cfg_colors else ["#5637cd"]
+    palette = (
+        cfg_colors.get("default_palette", ["#6633FF"]) if cfg_colors else ["#6633FF"]
+    )
     if not palette:  # Handle empty palette case
-        palette = ["#5637cd"]
-    
+        palette = ["#6633FF"]
+
     # Generate list of colors cycling through the palette
     num_bars = len(data.index)
     colors_list = [palette[i % len(palette)] for i in range(num_bars)]
 
     if isinstance(data, pd.Series):
         # Ensure Series data is numeric, converting if possible
-        numeric_data = pd.to_numeric(data, errors='coerce')
+        numeric_data = pd.to_numeric(data, errors="coerce")
         if numeric_data.isnull().all():
-            print(f"Warning: Series '{data.name}' contains no numeric data after conversion. Skipping trace.")
+            print(
+                f"Warning: Series '{data.name}' contains no numeric data after conversion. Skipping trace."
+            )
             return
 
         series_name = data.name or "Value"
@@ -82,14 +86,18 @@ def _add_bar_traces(
                 go.Bar(
                     x=data.index,  # Category names
                     y=data[col],
-                    marker=dict(color=override_color if override_color else colors_list),
+                    marker=dict(
+                        color=override_color if override_color else colors_list
+                    ),
                     name=col,
                     showlegend=False,  # Usually false for single series
                 )
             )
         else:
             # Multiple columns case - grouped bars, each group (column) gets one color
-            print(f"Warning: More than one numeric column found ({list(numeric_cols)}). Creating grouped bars with single color per group. Use multi_bar for more control.")
+            print(
+                f"Warning: More than one numeric column found ({list(numeric_cols)}). Creating grouped bars with single color per group. Use multi_bar for more control."
+            )
             ordered_cols = apply_legend_order(list(numeric_cols), legend_order)
             bar_color_override = (
                 {col: bar_color for col in ordered_cols} if bar_color else None
@@ -111,7 +119,7 @@ def _add_bar_traces(
                     )
                 )
             # Set barmode to group explicitly for multiple columns
-            fig.update_layout(barmode='group')
+            fig.update_layout(barmode="group")
 
 
 class BarSpec(ChartSpec):
@@ -148,8 +156,6 @@ def render_bar(
         axis_options=spec.axis_options,
         x_axis_title=spec.x_axis_title,
         y_axis_title=spec.y_axis_title,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )

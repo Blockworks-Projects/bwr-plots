@@ -8,6 +8,7 @@ from .legacy import (
 )
 from .public import (
     ChartArtifact,
+    ChartHtmlRequest,
     ChartSpec,
     LayerSpec,
     ColumnFormatSpec,
@@ -18,12 +19,14 @@ from .public import (
     make_layer_spec,
     render_chart,
     render_chart_artifact,
+    render_chart_html,
     render_plot_html,
     render_table_html,
 )
 
 __all__ = [
     "ChartArtifact",
+    "ChartHtmlRequest",
     "ChartSpec",
     "ColumnFormatSpec",
     "LayerSpec",
@@ -39,6 +42,7 @@ __all__ = [
     "preprocess_plot_data",
     "render_chart",
     "render_chart_artifact",
+    "render_chart_html",
     "render_plot_html",
     "render_table_html",
     "validate_plot_data",

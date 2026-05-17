@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from bwr_plots import list_chart_types, render_chart
+from bwr_plots import list_chart_types, render_chart, render_chart_html
 
 
 def _scatter_data() -> pd.DataFrame:
@@ -49,7 +49,11 @@ def _point_data() -> pd.DataFrame:
     [
         ("scatter", _scatter_data(), {"title": "Scatter"}),
         ("metric_share_area", _share_data(), {"title": "Share"}),
-        ("bar", pd.Series([10, 12, 9], index=["A", "B", "C"], name="Value"), {"title": "Bar"}),
+        (
+            "bar",
+            pd.Series([10, 12, 9], index=["A", "B", "C"], name="Value"),
+            {"title": "Bar"},
+        ),
         (
             "multi_bar",
             _category_data(),
@@ -60,19 +64,67 @@ def _point_data() -> pd.DataFrame:
             _category_data(),
             {"title": "Stacked", "xaxis_is_date": False},
         ),
-        ("horizontal_bar", pd.Series([4, -3, 2], index=["A", "B", "C"]), {"title": "HBar"}),
+        (
+            "horizontal_bar",
+            pd.Series([4, -3, 2], index=["A", "B", "C"]),
+            {"title": "HBar"},
+        ),
         ("pie", pd.Series([40, 35, 25], index=["A", "B", "C"]), {"title": "Pie"}),
         (
             "point",
             _point_data(),
-            {"title": "Point", "x_column": "x", "y_column": "y", "group_column": "group"},
+            {
+                "title": "Point",
+                "x_column": "x",
+                "y_column": "y",
+                "group_column": "group",
+            },
         ),
     ],
 )
-def test_each_registered_chart_renders(chart_name: str, data: pd.DataFrame | pd.Series, spec: dict) -> None:
+def test_each_registered_chart_renders(
+    chart_name: str, data: pd.DataFrame | pd.Series, spec: dict
+) -> None:
     fig = render_chart(data, {"kind": chart_name, **spec})
     assert isinstance(fig, go.Figure)
     assert len(fig.data) > 0
+
+
+def test_render_chart_html_composes_chart_and_html() -> None:
+    html = render_chart_html(
+        {
+            "data": _scatter_data(),
+            "spec": {"kind": "scatter", "title": "HTML Scatter"},
+            "full_html": True,
+            "plotly_config": {"displayModeBar": False},
+        }
+    )
+    assert "HTML Scatter" in html
+    assert "Plotly.newPlot" in html
+    assert '"displayModeBar": false' in html
+
+
+def test_render_chart_html_defaults_to_flat_obsidian_background() -> None:
+    html = render_chart_html(
+        {
+            "data": _scatter_data(),
+            "spec": {"kind": "scatter", "title": "Flat Obsidian"},
+            "full_html": True,
+        }
+    )
+
+    assert "background-image: url(" not in html
+    assert "bwr_background" not in html
+    assert "html, body {" in html
+    assert "background-color: #1A1A1A;" in html
+    assert '"paper_bgcolor":"#1A1A1A"' in html
+    assert '"plot_bgcolor":"#1A1A1A"' in html
+
+
+def test_render_chart_uses_brand_amethyst_as_first_series_color() -> None:
+    fig = render_chart(_scatter_data(), {"kind": "scatter", "title": "Amethyst"})
+
+    assert fig.data[0].line.color == "#6633FF"
 
 
 def test_registry_auto_discovers_all_default_chart_modules() -> None:
@@ -105,7 +157,9 @@ def test_date_axis_emits_range_aware_tickformatstops() -> None:
 
 
 def test_category_axis_omits_tickformatstops() -> None:
-    fig = render_chart(_category_data(), {"kind": "stacked_bar", "xaxis_is_date": False})
+    fig = render_chart(
+        _category_data(), {"kind": "stacked_bar", "xaxis_is_date": False}
+    )
     assert fig.layout.xaxis.type == "category"
     # Category axes should not carry the date-only stops payload.
     assert not fig.layout.xaxis.tickformatstops
@@ -129,3 +183,4 @@ def test_highlight_band_layer_composes_with_scatter_chart() -> None:
         ],
     )
     assert len(fig.layout.shapes) == 1
+    assert fig.layout.shapes[0].fillcolor == "#5637cd"

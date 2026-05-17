@@ -27,7 +27,11 @@ def load_watermark(plotter) -> None:
     selected_key = cfg_watermark.get("selected_watermark_key")
     available_watermarks = cfg_watermark.get("available_watermarks", {})
 
-    if not selected_key or not available_watermarks or selected_key not in available_watermarks:
+    if (
+        not selected_key
+        or not available_watermarks
+        or selected_key not in available_watermarks
+    ):
         print(
             f"Warning: Watermark key '{selected_key}' not found or 'available_watermarks' misconfigured. Watermark disabled."
         )
@@ -45,7 +49,9 @@ def load_watermark(plotter) -> None:
         return
 
     if not img_rel_path:
-        print(f"Warning: No path defined for watermark key '{selected_key}'. Watermark disabled.")
+        print(
+            f"Warning: No path defined for watermark key '{selected_key}'. Watermark disabled."
+        )
         plotter.watermark = None
         plotter.watermark_aspect_ratio = None
         return
@@ -85,9 +91,13 @@ def load_watermark(plotter) -> None:
         if image_bytes:
             mime_type, _ = mimetypes.guess_type(resource_path or img_rel_path)
             if mime_type and mime_type.startswith("image/"):
-                plotter.watermark = f"data:{mime_type};base64," + base64.b64encode(image_bytes).decode("utf-8")
+                plotter.watermark = f"data:{mime_type};base64," + base64.b64encode(
+                    image_bytes
+                ).decode("utf-8")
             else:
-                plotter.watermark = "data:image/png;base64," + base64.b64encode(image_bytes).decode("utf-8")
+                plotter.watermark = "data:image/png;base64," + base64.b64encode(
+                    image_bytes
+                ).decode("utf-8")
 
             plotter.watermark_aspect_ratio = None
             if mime_type == "image/svg+xml":
@@ -108,7 +118,9 @@ def load_watermark(plotter) -> None:
             plotter.watermark = None
             plotter.watermark_aspect_ratio = None
     except Exception as exc:
-        print(f"Warning: Failed to load watermark from {img_rel_path}: {exc}. Watermark disabled.")
+        print(
+            f"Warning: Failed to load watermark from {img_rel_path}: {exc}. Watermark disabled."
+        )
         plotter.watermark = None
         plotter.watermark_aspect_ratio = None
 
@@ -116,7 +128,6 @@ def load_watermark(plotter) -> None:
 def load_background_image(plotter) -> None:
     img_rel_path = plotter.config["general"].get("background_image_path", "")
     if not img_rel_path:
-        print("Info: No background_image_path specified in config['general']. Background image disabled.")
         plotter.background_image_data = None
         return
 
@@ -158,7 +169,9 @@ def load_background_image(plotter) -> None:
             base64_string = base64.b64encode(image_bytes).decode("utf-8")
             plotter.background_image_data = f"data:{mime_type};base64,{base64_string}"
         else:
-            print(f"Warning: Background image '{img_rel_path}' not found or invalid. Background disabled.")
+            print(
+                f"Warning: Background image '{img_rel_path}' not found or invalid. Background disabled."
+            )
             plotter.background_image_data = None
     except Exception as exc:
         print(f"Warning: Failed to load background image from {img_rel_path}: {exc}")

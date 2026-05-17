@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....platform.axes import _get_scale_and_suffix, calculate_yaxis_grid_params
-from ....platform.export import save_plot_image
 from .service import _add_stacked_bar_traces
 
 
@@ -37,11 +36,6 @@ class StackedBarChartMixin:
         plot_area_b_padding: Optional[int] = None,
         xaxis_is_date: bool = True,
         x_axis_title: Optional[str] = None,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -53,7 +47,9 @@ class StackedBarChartMixin:
 
         plot_height = height if height is not None else cfg_gen["height"]
         current_legend_y = cfg_leg["y"] if show_legend else 0
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
         current_group_days = (
             group_days if group_days is not None else cfg_plot.get("default_group_days")
         )
@@ -72,18 +68,26 @@ class StackedBarChartMixin:
         plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
         plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
 
-        if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(plot_data.index):
+        if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
+            plot_data.index
+        ):
             try:
-                plot_data = plot_data.groupby(pd.Grouper(freq=f"{current_group_days}D")).sum()
+                plot_data = plot_data.groupby(
+                    pd.Grouper(freq=f"{current_group_days}D")
+                ).sum()
             except Exception as exc:
-                print(f"Warning: Could not group data by {current_group_days} days: {exc}")
+                print(
+                    f"Warning: Could not group data by {current_group_days} days: {exc}"
+                )
 
         effective_date = date
         if effective_date is None and not plot_data.empty:
             if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
                     max_dt = plot_data.index.max()
-                    effective_date = max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    effective_date = (
+                        max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    )
                 except Exception as exc:
                     effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
                     print(
@@ -133,7 +137,9 @@ class StackedBarChartMixin:
 
         yaxis_params = None
         axis_min_calculated = None
-        user_provided_range = axis_options.get("primary_range") if axis_options else None
+        user_provided_range = (
+            axis_options.get("primary_range") if axis_options else None
+        )
         if not scaled_row_sums.empty and scaled_row_sums.notna().any():
             valid_scaled_row_sums = scaled_row_sums.dropna()
             if not valid_scaled_row_sums.empty:
@@ -170,17 +176,23 @@ class StackedBarChartMixin:
             axis_min_calculated = 0
 
         if "primary_tickformat" not in local_axis_options:
-            local_axis_options["primary_tickformat"] = cfg_plot.get("y_tickformat", ",.0f")
+            local_axis_options["primary_tickformat"] = cfg_plot.get(
+                "y_tickformat", ",.0f"
+            )
 
         if scale_factor > 1.0:
             try:
-                numeric_cols_to_scale = plot_data.select_dtypes(include=np.number).columns
+                numeric_cols_to_scale = plot_data.select_dtypes(
+                    include=np.number
+                ).columns
                 if not numeric_cols_to_scale.empty:
                     plot_data[numeric_cols_to_scale] = (
                         plot_data[numeric_cols_to_scale] / scale_factor
                     )
             except Exception as exc:
-                print(f"Warning: Could not scale plot_data before adding traces: {exc}.")
+                print(
+                    f"Warning: Could not scale plot_data before adding traces: {exc}."
+                )
 
         _add_stacked_bar_traces(
             fig=fig,
@@ -224,16 +236,4 @@ class StackedBarChartMixin:
         if use_watermark_flag:
             self._add_watermark(fig)
 
-        if save_image:
-            success, message = save_plot_image(
-                fig,
-                title,
-                save_path,
-                static_formats,
-                static_scale,
-            )
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

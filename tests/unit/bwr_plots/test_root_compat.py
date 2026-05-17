@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from bwr_plots import (
     BWRPlots,
+    ChartHtmlRequest,
     ColumnFormatSpec,
     analyze_dataframe,
     preprocess_dataframe,
+    render_chart_html,
     render_table_html,
     round_and_align_dates,
-    save_plot_image,
 )
 from bwr_plots.features.tabular_input import validate_categorical_chart_data
 from bwr_plots.platform import calculate_yaxis_grid_params, deep_merge_dicts
@@ -18,8 +19,9 @@ def test_root_public_exports_remain_importable() -> None:
     assert preprocess_dataframe is not None
     assert analyze_dataframe is not None
     assert round_and_align_dates is not None
-    assert save_plot_image is not None
+    assert render_chart_html is not None
     assert render_table_html is not None
+    assert ChartHtmlRequest is not None
     assert ColumnFormatSpec is not None
 
 

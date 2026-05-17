@@ -59,8 +59,14 @@ def _add_point_traces(
         print("Warning: No data to plot for point plot.")
         return
 
-    base_marker_size = marker_size if marker_size is not None else cfg_plot.get("marker_size", 10)
-    base_marker_opacity = marker_opacity if marker_opacity is not None else cfg_plot.get("marker_opacity", 0.85)
+    base_marker_size = (
+        marker_size if marker_size is not None else cfg_plot.get("marker_size", 10)
+    )
+    base_marker_opacity = (
+        marker_opacity
+        if marker_opacity is not None
+        else cfg_plot.get("marker_opacity", 0.85)
+    )
     marker_symbol = cfg_plot.get("marker_symbol", "circle")
     text_position = cfg_plot.get("label_textposition", "top center")
     label_font = dict(
@@ -105,9 +111,9 @@ def _add_point_traces(
             marker_kwargs["size"] = base_marker_size
         return marker_kwargs
 
-    colors = cfg_colors.get("default_palette", ["#5637cd"])
+    colors = cfg_colors.get("default_palette", ["#6633FF"])
     if not colors:
-        colors = ["#5637cd"]
+        colors = ["#6633FF"]
 
     if group_column and group_column in data.columns:
         groups = data[group_column].fillna("Unknown").astype(str)
@@ -151,7 +157,7 @@ def _add_point_traces(
     else:
         if uniform_color:
             # Single color for all points (use primary or first palette color)
-            single_color = colors[0] if colors else cfg_colors.get("primary", "#5637cd")
+            single_color = colors[0] if colors else cfg_colors.get("primary", "#6633FF")
             point_colors = single_color
         else:
             # Rainbow - existing behavior
@@ -201,7 +207,9 @@ def _add_point_traces(
         # Convert dates to numeric if needed
         is_datetime_x = pd.api.types.is_datetime64_any_dtype(x_vals)
         if is_datetime_x:
-            x_numeric = pd.to_datetime(x_vals).map(pd.Timestamp.toordinal).values.astype(float)
+            x_numeric = (
+                pd.to_datetime(x_vals).map(pd.Timestamp.toordinal).values.astype(float)
+            )
         else:
             x_numeric = np.array(x_vals, dtype=float)
 
@@ -220,7 +228,6 @@ def _add_point_traces(
             # Determine which regression type to use
             effective_type = trendline_type
             y_predicted_clean = None
-
 
             y_smooth = None
 
@@ -286,22 +293,23 @@ def _add_point_traces(
 
             # Get descriptive legend name
             legend_name = _get_trendline_name(
-                effective_type,
-                r_squared if show_r_squared else None
+                effective_type, r_squared if show_r_squared else None
             )
 
-            fig.add_trace(go.Scatter(
-                x=x_line,
-                y=y_smooth.tolist(),
-                mode='lines',
-                name=legend_name,
-                line=dict(
-                    dash='dash',
-                    color=trend_color,
-                    width=2,
-                ),
-                showlegend=True,
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=x_line,
+                    y=y_smooth.tolist(),
+                    mode="lines",
+                    name=legend_name,
+                    line=dict(
+                        dash="dash",
+                        color=trend_color,
+                        width=2,
+                    ),
+                    showlegend=True,
+                )
+            )
 
 
 class PointSpec(ChartSpec):
@@ -337,7 +345,9 @@ def render_point(
     context: Any,
 ) -> ChartArtifact:
     if isinstance(data, dict):
-        raise ValueError("Point chart expects a DataFrame or Series, not a dictionary payload.")
+        raise ValueError(
+            "Point chart expects a DataFrame or Series, not a dictionary payload."
+        )
     fig = context.plotter.point_plot(
         data=data,
         x_column=spec.x_column,
@@ -364,8 +374,6 @@ def render_point(
         trendline_type=spec.trendline_type,
         trendline_color=spec.trendline_color,
         show_r_squared=spec.show_r_squared,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )

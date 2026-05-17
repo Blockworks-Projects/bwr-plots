@@ -67,6 +67,6 @@ class HighlightBand(StrictModel):
     color: str = "#5637cd"
     opacity: float = 0.16
     line_color: str | None = None
-    annotation_position: Literal["top left", "top right", "bottom left", "bottom right"] = (
-        "top left"
-    )
+    annotation_position: Literal[
+        "top left", "top right", "bottom left", "bottom right"
+    ] = "top left"

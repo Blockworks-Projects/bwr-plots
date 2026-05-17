@@ -156,13 +156,13 @@ def render_multi_bar(
         xaxis_is_date=spec.xaxis_is_date,
         x_axis_title=spec.x_axis_title,
         y_axis_title=spec.y_axis_title,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )
     return ChartArtifact(
         fig=fig,
         chart_name=spec.kind,
-        xaxis_type="date" if spec.xaxis_is_date else getattr(fig.layout.xaxis, "type", None),
+        xaxis_type="date"
+        if spec.xaxis_is_date
+        else getattr(fig.layout.xaxis, "type", None),
     )

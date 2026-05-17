@@ -12,8 +12,7 @@ import pandas as pd
 from ..api import (
     get_chart_metadata,
     list_chart_types,
-    render_chart,
-    render_plot_html,
+    render_chart_html,
     render_table_html,
 )
 from ..api.tables import coerce_column_formats_payload
@@ -28,15 +27,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list-charts", help="List available chart types.")
+    list_parser = subparsers.add_parser(
+        "list-charts", help="List available chart types."
+    )
     list_parser.set_defaults(func=_run_list_charts)
 
-    render_parser = subparsers.add_parser("render", help="Render a chart from tabular data.")
+    render_parser = subparsers.add_parser(
+        "render", help="Render a chart from tabular data."
+    )
     render_parser.add_argument("--chart", required=True, help="Registered chart type.")
-    render_parser.add_argument("--data", required=True, help="Path to CSV/XLS/XLSX input.")
+    render_parser.add_argument(
+        "--data", required=True, help="Path to CSV/XLS/XLSX input."
+    )
     render_parser.add_argument("--output-file", required=True, help="Output HTML path.")
-    render_parser.add_argument("--spec-json", help="Inline JSON object for the chart spec.")
-    render_parser.add_argument("--spec-file", help="Path to a JSON file containing the chart spec.")
+    render_parser.add_argument(
+        "--spec-json", help="Inline JSON object for the chart spec."
+    )
+    render_parser.add_argument(
+        "--spec-file", help="Path to a JSON file containing the chart spec."
+    )
     render_parser.add_argument(
         "--layers-json",
         help="Optional JSON array of layer specs.",
@@ -47,7 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     render_parser.add_argument("--sheet", help="Excel sheet name.")
     render_parser.add_argument("--index-column", help="Column to set as index.")
-    render_parser.add_argument("--date-col", help="Date column to parse and set as index.")
+    render_parser.add_argument(
+        "--date-col", help="Date column to parse and set as index."
+    )
     render_parser.add_argument(
         "--include-plotlyjs",
         choices=["cdn", "inline"],
@@ -66,7 +77,9 @@ def build_parser() -> argparse.ArgumentParser:
         "render-table",
         help="Render a branded table from tabular data.",
     )
-    table_parser.add_argument("--data", required=True, help="Path to CSV/XLS/XLSX input.")
+    table_parser.add_argument(
+        "--data", required=True, help="Path to CSV/XLS/XLSX input."
+    )
     table_parser.add_argument("--output-file", required=True, help="Output HTML path.")
     table_parser.add_argument("--title", help="Table title.")
     table_parser.add_argument("--subtitle", default="", help="Table subtitle.")
@@ -127,8 +140,15 @@ def _run_render(args: argparse.Namespace) -> int:
     spec_payload["kind"] = args.chart
     layers_payload = _load_json_array(args.layers_json, args.layers_file)
 
-    fig = render_chart(df, spec_payload, layers=layers_payload)
-    html = render_plot_html(fig, include_plotlyjs=args.include_plotlyjs, full_html=True)
+    html = render_chart_html(
+        {
+            "data": df,
+            "spec": spec_payload,
+            "layers": layers_payload,
+            "include_plotlyjs": args.include_plotlyjs,
+            "full_html": True,
+        }
+    )
     _write_html_output(args.output_file, html, open_output=args.open)
     return 0
 
@@ -169,9 +189,14 @@ def _prepare_dataframe(
     prepared = df.copy()
     resolved_date_col = _resolve_date_column(prepared, requested=date_col)
     if resolved_date_col:
-        prepared[resolved_date_col] = pd.to_datetime(prepared[resolved_date_col], errors="coerce")
+        prepared[resolved_date_col] = pd.to_datetime(
+            prepared[resolved_date_col], errors="coerce"
+        )
         prepared = prepared.set_index(resolved_date_col)
-        if isinstance(prepared.index, pd.DatetimeIndex) and prepared.index.tz is not None:
+        if (
+            isinstance(prepared.index, pd.DatetimeIndex)
+            and prepared.index.tz is not None
+        ):
             prepared.index = prepared.index.tz_localize(None)
         prepared = prepared[prepared.index.notna()]
     elif index_column and index_column in prepared.columns:
@@ -202,7 +227,9 @@ def _resolve_date_column(df: pd.DataFrame, requested: str | None) -> str | None:
             if alias in normalized_map:
                 return normalized_map[alias]
 
-    date_like_columns = [column for column in df.columns if _is_date_like_series(df[column])]
+    date_like_columns = [
+        column for column in df.columns if _is_date_like_series(df[column])
+    ]
     if len(date_like_columns) == 1:
         return date_like_columns[0]
 
@@ -227,14 +254,18 @@ def _is_date_like_series(series: pd.Series) -> bool:
     return bool(parsed.notna().mean() >= 0.8)
 
 
-def _load_json_object(inline_value: str | None, file_path: str | None) -> dict[str, Any]:
+def _load_json_object(
+    inline_value: str | None, file_path: str | None
+) -> dict[str, Any]:
     payload = _load_json_payload(inline_value, file_path, default={})
     if not isinstance(payload, dict):
         raise ValueError("Chart spec must be a JSON object.")
     return payload
 
 
-def _load_json_array(inline_value: str | None, file_path: str | None) -> list[dict[str, Any]]:
+def _load_json_array(
+    inline_value: str | None, file_path: str | None
+) -> list[dict[str, Any]]:
     payload = _load_json_payload(inline_value, file_path, default=[])
     if not isinstance(payload, list):
         raise ValueError("Layer payload must be a JSON array.")

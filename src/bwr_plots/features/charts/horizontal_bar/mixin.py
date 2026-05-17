@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....platform.axes import _get_scale_and_suffix, calculate_yaxis_grid_params
-from ....platform.export import save_plot_image
 from .service import _add_horizontal_bar_traces
 
 
@@ -40,11 +39,6 @@ class HorizontalBarChartMixin:
         plot_area_b_padding: Optional[int] = None,
         x_axis_title: Optional[str] = None,
         y_axis_title: Optional[str] = None,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -55,8 +49,12 @@ class HorizontalBarChartMixin:
         cfg_axes = self.config["axes"]
 
         plot_height = height if height is not None else cfg_gen["height"]
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
-        current_bar_height = bar_height if bar_height is not None else cfg_plot["bar_height"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
+        current_bar_height = (
+            bar_height if bar_height is not None else cfg_plot["bar_height"]
+        )
         current_bargap = bargap if bargap is not None else cfg_plot["bargap"]
         current_sort_ascending = (
             sort_ascending
@@ -71,12 +69,18 @@ class HorizontalBarChartMixin:
         if isinstance(data, pd.DataFrame):
             if x_column and y_column:
                 if x_column not in data.columns:
-                    print(f"Error: x_column '{x_column}' not found in DataFrame columns.")
+                    print(
+                        f"Error: x_column '{x_column}' not found in DataFrame columns."
+                    )
                     return go.Figure()
                 if y_column not in data.columns:
-                    print(f"Error: y_column '{y_column}' not found in DataFrame columns.")
+                    print(
+                        f"Error: y_column '{y_column}' not found in DataFrame columns."
+                    )
                     return go.Figure()
-                plot_data = pd.Series(data[x_column].values, index=data[y_column].values)
+                plot_data = pd.Series(
+                    data[x_column].values, index=data[y_column].values
+                )
                 plot_data.name = x_column
             else:
                 print(
@@ -84,7 +88,9 @@ class HorizontalBarChartMixin:
                 )
                 numeric_cols = data.select_dtypes(include=np.number).columns
                 if not numeric_cols.any():
-                    print("Error: DataFrame input for horizontal bar has no numeric columns.")
+                    print(
+                        "Error: DataFrame input for horizontal bar has no numeric columns."
+                    )
                     return go.Figure()
                 x_col_name = numeric_cols[0]
                 plot_data = data[x_col_name].copy()
@@ -101,7 +107,9 @@ class HorizontalBarChartMixin:
             plot_data = pd.to_numeric(plot_data, errors="coerce")
             plot_data = plot_data.dropna()
             if plot_data.empty:
-                print("Error: No numeric data remaining after coercion in horizontal_bar.")
+                print(
+                    "Error: No numeric data remaining after coercion in horizontal_bar."
+                )
                 return go.Figure()
         if not pd.api.types.is_string_dtype(
             plot_data.index.dtype
@@ -251,16 +259,4 @@ class HorizontalBarChartMixin:
 
         self._apply_background_image(fig, "horizontal_bar", dynamic_left_margin)
 
-        if save_image:
-            success, message = save_plot_image(
-                fig,
-                title,
-                save_path,
-                static_formats,
-                static_scale,
-            )
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

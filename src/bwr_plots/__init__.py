@@ -1,5 +1,6 @@
 from .api import (
     ChartArtifact,
+    ChartHtmlRequest,
     ChartSpec,
     ColumnFormatSpec,
     LayerSpec,
@@ -15,6 +16,7 @@ from .api import (
     preprocess_plot_data,
     render_chart,
     render_chart_artifact,
+    render_chart_html,
     render_plot_html,
     render_table_html,
     validate_plot_data,
@@ -25,13 +27,14 @@ from .features.tabular_input import (
     analyze_dataframe,
     validate_categorical_chart_data,
 )
-from .platform.plotter import BWRPlots, round_and_align_dates, save_plot_image
+from .platform.plotter import BWRPlots, round_and_align_dates
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 __all__ = [
     "BWRPlots",
     "ChartArtifact",
+    "ChartHtmlRequest",
     "ChartSpec",
     "ColumnFormatSpec",
     "LayerSpec",
@@ -51,10 +54,10 @@ __all__ = [
     "preprocess_plot_data",
     "render_chart",
     "render_chart_artifact",
+    "render_chart_html",
     "render_plot_html",
     "render_table_html",
     "round_and_align_dates",
-    "save_plot_image",
     "validate_categorical_chart_data",
     "validate_plot_data",
 ]

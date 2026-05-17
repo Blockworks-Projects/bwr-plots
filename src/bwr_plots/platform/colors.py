@@ -28,7 +28,7 @@ def build_series_color_map(
     palette: List[str],
     *override_dicts: dict[str, str] | None,
 ) -> dict[str, str]:
-    effective_palette = palette or ["#5637cd"]
+    effective_palette = palette or ["#6633FF"]
     palette_len = len(effective_palette)
     color_map: dict[str, str] = {}
     slot_index = 0

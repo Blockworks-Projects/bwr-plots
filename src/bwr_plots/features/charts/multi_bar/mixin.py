@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....platform.axes import _get_scale_and_suffix, calculate_yaxis_grid_params
-from ....platform.export import save_plot_image
 from .service import _add_multi_bar_traces
 
 
@@ -38,11 +37,6 @@ class MultiBarChartMixin:
         xaxis_is_date: bool = True,
         x_axis_title: Optional[str] = None,
         y_axis_title: Optional[str] = None,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -54,7 +48,9 @@ class MultiBarChartMixin:
 
         plot_height = height if height is not None else cfg_gen["height"]
         current_legend_y = cfg_leg["y"] if show_legend else 0
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
         current_group_days = (
             group_days if group_days is not None else cfg_plot.get("default_group_days")
         )
@@ -78,18 +74,26 @@ class MultiBarChartMixin:
         plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
         plot_data = self._prepare_xaxis_data(plot_data, xaxis_is_date)
 
-        if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(plot_data.index):
+        if current_group_days is not None and pd.api.types.is_datetime64_any_dtype(
+            plot_data.index
+        ):
             try:
-                plot_data = plot_data.groupby(pd.Grouper(freq=f"{current_group_days}D")).sum()
+                plot_data = plot_data.groupby(
+                    pd.Grouper(freq=f"{current_group_days}D")
+                ).sum()
             except Exception as exc:
-                print(f"Warning: Could not group data by {current_group_days} days: {exc}")
+                print(
+                    f"Warning: Could not group data by {current_group_days} days: {exc}"
+                )
 
         effective_date = date
         if effective_date is None and not plot_data.empty:
             if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
                     max_dt = plot_data.index.max()
-                    effective_date = max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    effective_date = (
+                        max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    )
                 except Exception as exc:
                     effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
                     print(
@@ -122,13 +126,19 @@ class MultiBarChartMixin:
                 local_axis_options["primary_suffix"] = final_suffix
                 if scale > 1:
                     try:
-                        numeric_cols = plot_data.select_dtypes(include=np.number).columns
+                        numeric_cols = plot_data.select_dtypes(
+                            include=np.number
+                        ).columns
                         plot_data[numeric_cols] = plot_data[numeric_cols] / scale
                     except Exception as exc:
                         print(f"Warning: Could not scale data: {exc}.")
-                y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
+                y_values_for_range = plot_data.select_dtypes(
+                    include=np.number
+                ).values.flatten()
                 y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
-                user_provided_range = axis_options.get("primary_range") if axis_options else None
+                user_provided_range = (
+                    axis_options.get("primary_range") if axis_options else None
+                )
                 if y_values_for_range:
                     yaxis_params = calculate_yaxis_grid_params(
                         y_data=y_values_for_range,
@@ -140,7 +150,9 @@ class MultiBarChartMixin:
                         local_axis_options["primary_range"] = yaxis_params["range"]
                         local_axis_options["primary_tick0"] = yaxis_params["tick0"]
                         local_axis_options["primary_dtick"] = yaxis_params["dtick"]
-                        local_axis_options["primary_tickmode"] = yaxis_params["tickmode"]
+                        local_axis_options["primary_tickmode"] = yaxis_params[
+                            "tickmode"
+                        ]
                     else:
                         local_axis_options["primary_range"] = user_provided_range
                 else:
@@ -153,9 +165,15 @@ class MultiBarChartMixin:
                         local_axis_options["primary_range"] = user_provided_range
                     axis_min_calculated = 0
             else:
-                local_axis_options["primary_suffix"] = suffix if suffix is not None else ""
-                print("[Warning] multi_bar: No numeric data found for scaling or axis calculation.")
-                user_provided_range = axis_options.get("primary_range") if axis_options else None
+                local_axis_options["primary_suffix"] = (
+                    suffix if suffix is not None else ""
+                )
+                print(
+                    "[Warning] multi_bar: No numeric data found for scaling or axis calculation."
+                )
+                user_provided_range = (
+                    axis_options.get("primary_range") if axis_options else None
+                )
                 if user_provided_range is None:
                     local_axis_options["primary_range"] = [0, 1]
                 else:
@@ -163,9 +181,13 @@ class MultiBarChartMixin:
                 axis_min_calculated = 0
         else:
             local_axis_options["primary_suffix"] = suffix if suffix is not None else ""
-            y_values_for_range = plot_data.select_dtypes(include=np.number).values.flatten()
+            y_values_for_range = plot_data.select_dtypes(
+                include=np.number
+            ).values.flatten()
             y_values_for_range = [y for y in y_values_for_range if pd.notna(y)]
-            user_provided_range = axis_options.get("primary_range") if axis_options else None
+            user_provided_range = (
+                axis_options.get("primary_range") if axis_options else None
+            )
             if y_values_for_range:
                 yaxis_params = calculate_yaxis_grid_params(
                     y_data=y_values_for_range,
@@ -238,16 +260,4 @@ class MultiBarChartMixin:
         if use_watermark_flag:
             self._add_watermark(fig)
 
-        if save_image:
-            success, message = save_plot_image(
-                fig,
-                title,
-                save_path,
-                static_formats,
-                static_scale,
-            )
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

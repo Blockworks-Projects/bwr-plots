@@ -25,19 +25,12 @@ def _add_metric_share_area_traces(
         cfg_plot: Plot-specific configuration from config["plot_specific"]["metric_share_area"]
         cfg_colors: Color configuration
     """
-    print("\n==== DEBUGGING METRIC SHARE AREA PLOT ====")
-    print(f"Data shape: {data.shape}")
-    print(f"Data columns: {data.columns.tolist()}")
-    print(f"Data index: {type(data.index)}")
-    print(f"First few rows of data:\n{data.head().to_string()}")
-
     if data is None or data.empty:
         print("Warning: No data provided for metric share area plot.")
         return
 
     # Get only numeric columns (non-numeric can't be plotted)
     numeric_cols = data.select_dtypes(include=np.number).columns
-    print(f"Numeric columns: {numeric_cols.tolist()}")
 
     if len(numeric_cols) == 0:
         print("Warning: No numeric columns found in data for metric share area plot.")
@@ -48,8 +41,6 @@ def _add_metric_share_area_traces(
     elif not data.empty:
         last_row_values = data[numeric_cols].iloc[-1]
         ordered_cols = last_row_values.sort_values(ascending=False).index.tolist()
-        print(f"Sorted columns by last value (largest to smallest): {ordered_cols}")
-        print(f"Last row values used for sorting: {last_row_values.to_dict()}")
     else:
         ordered_cols = numeric_cols.tolist()
         print("Warning: Data is empty, using original column order for colors.")
@@ -59,7 +50,6 @@ def _add_metric_share_area_traces(
         cfg_colors["default_palette"],
         series_colors,
     )
-    print(f"Assigned colors: {color_map}")
 
     # Area traces (main traces, not shown in legend)
     for i, col in enumerate(ordered_cols):
@@ -72,7 +62,9 @@ def _add_metric_share_area_traces(
                 name=col,  # Use the column name as the trace name
                 fillcolor=color_map[col],
                 line=dict(width=0.5, color=color_map[col]),
-                marker=dict(symbol="circle", size=12, opacity=0),  # Invisible markers on plot
+                marker=dict(
+                    symbol="circle", size=12, opacity=0
+                ),  # Invisible markers on plot
                 hovertemplate="%{y:.1%}<extra>" + col + "</extra>",
                 legendgroup=col,
                 showlegend=False,  # Hide main trace from legend
@@ -92,7 +84,6 @@ def _add_metric_share_area_traces(
                 showlegend=True,
             )
         )
-
 
 
 class MetricShareAreaSpec(ChartSpec):
@@ -133,13 +124,13 @@ def render_metric_share_area(
         xaxis_is_date=spec.xaxis_is_date,
         x_axis_title=spec.x_axis_title,
         y_axis_title=spec.y_axis_title,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )
     return ChartArtifact(
         fig=fig,
         chart_name=spec.kind,
-        xaxis_type="date" if spec.xaxis_is_date else getattr(fig.layout.xaxis, "type", None),
+        xaxis_type="date"
+        if spec.xaxis_is_date
+        else getattr(fig.layout.xaxis, "type", None),
     )

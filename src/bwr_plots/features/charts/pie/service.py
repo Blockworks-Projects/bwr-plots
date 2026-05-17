@@ -50,7 +50,9 @@ def _add_pie_traces(
         # Use first numeric column
         plot_data = data[numeric_cols[0]]
         if len(numeric_cols) > 1:
-            print(f"Note: Multiple numeric columns found. Using '{numeric_cols[0]}' for pie chart.")
+            print(
+                f"Note: Multiple numeric columns found. Using '{numeric_cols[0]}' for pie chart."
+            )
     else:
         plot_data = data
 
@@ -75,10 +77,10 @@ def _add_pie_traces(
 
     palette = cfg_colors.get(
         "default_palette",
-        ["#5637cd", "#EF798A", "#32CD32", "#FF8C00", "#9370DB"],
+        ["#6633FF", "#EF798A", "#32CD32", "#FF8C00", "#9370DB"],
     )
     if not palette:
-        palette = ["#5637cd", "#EF798A", "#32CD32", "#FF8C00", "#9370DB"]
+        palette = ["#6633FF", "#EF798A", "#32CD32", "#FF8C00", "#9370DB"]
 
     color_map = build_series_color_map(
         plot_data.index.tolist(),
@@ -92,7 +94,9 @@ def _add_pie_traces(
         # When legend is shown, only display percentages on slices
         # When legend is hidden, show both label and percent
         if show_legend:
-            textinfo = "percent"  # Only show percentage on slices when legend is visible
+            textinfo = (
+                "percent"  # Only show percentage on slices when legend is visible
+            )
         else:
             textinfo = "label+percent"  # Show both when no legend
         text_labels = None  # Let Plotly handle the formatting
@@ -127,14 +131,14 @@ def _add_pie_traces(
         hoverinfo="text",
         marker=dict(
             colors=colors_list,
-            line=dict(color='#000000', width=2)  # Black border between all slices
+            line=dict(color="#000000", width=2),  # Black border between all slices
         ),
         hole=hole_size,  # Keep for optional donut, but default is 0
         pull=0,  # No pull effect - all slices stay together
         textfont=dict(
             family=cfg_plot.get("text_font_family", "Maison Neue, sans-serif"),
             size=cfg_plot.get("text_font_size", 18),
-            color=cfg_plot.get("text_font_color", "white")
+            color=cfg_plot.get("text_font_color", "white"),
         ),
         showlegend=True,
         domain=dict(x=domain_x, y=domain_y),  # Explicitly set domain for centering
@@ -142,7 +146,7 @@ def _add_pie_traces(
 
     # Only add text if we have custom text labels
     if text_labels is not None:
-        pie_args['text'] = text_labels
+        pie_args["text"] = text_labels
 
     fig.add_trace(go.Pie(**pie_args))
 
@@ -159,15 +163,11 @@ def _add_pie_traces(
             go.Scatter(
                 x=[None],  # No actual data points
                 y=[None],
-                mode='markers',
-                marker=dict(
-                    size=12,
-                    color=color,
-                    symbol='circle'
-                ),
+                mode="markers",
+                marker=dict(size=12, color=color, symbol="circle"),
                 showlegend=show_legend,  # Control visibility based on parameter
-                legendgroup=f'pie_{i}',
-                name=label
+                legendgroup=f"pie_{i}",
+                name=label,
             )
         )
 
@@ -206,8 +206,6 @@ def render_pie(
         hole_size=spec.hole_size,
         show_legend=spec.show_legend,
         use_watermark=spec.use_watermark,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )

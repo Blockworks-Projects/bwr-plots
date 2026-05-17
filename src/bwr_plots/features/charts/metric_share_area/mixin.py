@@ -8,7 +8,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ....platform.export import save_plot_image
 from .service import _add_metric_share_area_traces
 
 
@@ -33,11 +32,6 @@ class MetricShareAreaPlotMixin:
         xaxis_is_date: bool = True,
         x_axis_title: Optional[str] = None,
         y_axis_title: Optional[str] = None,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -49,7 +43,9 @@ class MetricShareAreaPlotMixin:
 
         plot_height = height if height is not None else cfg_gen["height"]
         current_legend_y = cfg_leg["y"] if show_legend else 0
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
 
         plot_data = data.copy()
         plot_data = self._ensure_datetime_index(plot_data, xaxis_is_date=xaxis_is_date)
@@ -58,9 +54,18 @@ class MetricShareAreaPlotMixin:
         numeric_cols = plot_data.select_dtypes(include=np.number).columns
         smoothed_data = plot_data.copy()
 
-        if smoothing_window is not None and smoothing_window > 1 and not plot_data.empty and len(numeric_cols) > 0:
+        if (
+            smoothing_window is not None
+            and smoothing_window > 1
+            and not plot_data.empty
+            and len(numeric_cols) > 0
+        ):
             try:
-                smoothed_values = plot_data[numeric_cols].rolling(window=smoothing_window, min_periods=1).mean()
+                smoothed_values = (
+                    plot_data[numeric_cols]
+                    .rolling(window=smoothing_window, min_periods=1)
+                    .mean()
+                )
                 smoothed_values = smoothed_values.fillna(0)
                 smoothed_data[numeric_cols] = smoothed_values
             except Exception as e:
@@ -69,7 +74,9 @@ class MetricShareAreaPlotMixin:
 
         data_to_normalize = smoothed_data[numeric_cols]
         if data_to_normalize.empty:
-            print("Warning: No numeric data found after potential smoothing to calculate shares.")
+            print(
+                "Warning: No numeric data found after potential smoothing to calculate shares."
+            )
             return go.Figure()
 
         row_sums = data_to_normalize.sum(axis=1)
@@ -82,10 +89,14 @@ class MetricShareAreaPlotMixin:
             if isinstance(plot_data.index, pd.DatetimeIndex):
                 try:
                     max_dt = plot_data.index.max()
-                    effective_date = max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    effective_date = (
+                        max_dt.strftime("%Y-%m-%d") if pd.notna(max_dt) else ""
+                    )
                 except Exception as e:
                     effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                    print(f"[Warning] metric_share_area: Could not automatically determine max date: {e}. Using today's date.")
+                    print(
+                        f"[Warning] metric_share_area: Could not automatically determine max date: {e}. Using today's date."
+                    )
             else:
                 effective_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
@@ -99,7 +110,9 @@ class MetricShareAreaPlotMixin:
         if y_axis_title:
             local_axis_options["primary_title"] = y_axis_title
 
-        user_provided_range = axis_options.get("primary_range") if axis_options else None
+        user_provided_range = (
+            axis_options.get("primary_range") if axis_options else None
+        )
         if user_provided_range is None:
             local_axis_options["primary_range"] = [0, 1]
             local_axis_options["primary_tickformat"] = ".0%"
@@ -110,7 +123,9 @@ class MetricShareAreaPlotMixin:
         else:
             local_axis_options["primary_range"] = user_provided_range
 
-        if not normalized_data.empty and isinstance(normalized_data.index, pd.DatetimeIndex):
+        if not normalized_data.empty and isinstance(
+            normalized_data.index, pd.DatetimeIndex
+        ):
             tickvals = list(normalized_data.index)
             if len(tickvals) > 1:
                 x_tickvals = [tickvals[0], tickvals[-1]]
@@ -123,7 +138,10 @@ class MetricShareAreaPlotMixin:
 
         effective_xaxis_type = "linear"
         data_source_for_index_check = normalized_data
-        if data_source_for_index_check is not None and not data_source_for_index_check.empty:
+        if (
+            data_source_for_index_check is not None
+            and not data_source_for_index_check.empty
+        ):
             if xaxis_is_date is True:
                 effective_xaxis_type = "date"
             elif xaxis_is_date is None:
@@ -167,16 +185,12 @@ class MetricShareAreaPlotMixin:
             source_y,
             plot_area_b_padding=plot_area_b_padding,
         )
-        self._apply_common_axes(fig, local_axis_options, axis_min_calculated=0, xaxis_is_date=xaxis_is_date)
+        self._apply_common_axes(
+            fig, local_axis_options, axis_min_calculated=0, xaxis_is_date=xaxis_is_date
+        )
         self._apply_background_image(fig, "metric_share_area")
 
         if use_watermark_flag:
             self._add_watermark(fig)
 
-        if save_image:
-            success, message = save_plot_image(fig, title, save_path, static_formats, static_scale)
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

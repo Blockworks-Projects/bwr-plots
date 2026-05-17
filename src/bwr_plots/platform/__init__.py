@@ -19,7 +19,7 @@ from .rendering import (
     render_chart,
     render_chart_artifact,
 )
-from .plotter import BWRPlots, round_and_align_dates, save_plot_image
+from .plotter import BWRPlots, round_and_align_dates
 from .specs import (
     ChartArtifact,
     ChartMetadata,
@@ -55,5 +55,4 @@ __all__ = [
     "render_chart",
     "render_chart_artifact",
     "round_and_align_dates",
-    "save_plot_image",
 ]

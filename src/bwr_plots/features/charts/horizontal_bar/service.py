@@ -42,7 +42,7 @@ def _add_horizontal_bar_traces(
     sorted_data = data.sort_values(ascending=sort_ascending)
 
     # Get colors
-    pos_color = color_positive or cfg_colors.get("hbar_positive", "#5637cd")
+    pos_color = color_positive or cfg_colors.get("hbar_positive", "#6633FF")
     neg_color = color_negative or cfg_colors.get("hbar_negative", "#EF798A")
 
     # Create colors array based on value sign
@@ -129,8 +129,6 @@ def render_horizontal_bar(
         suffix=spec.suffix,
         x_axis_title=spec.x_axis_title,
         y_axis_title=spec.y_axis_title,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )

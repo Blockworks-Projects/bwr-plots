@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -16,11 +16,6 @@ from ..features.charts.scatter.mixin import ScatterPlotMixin
 from ..features.charts.stacked_bar.mixin import StackedBarChartMixin
 from .assets import load_background_image, load_watermark, package_asset
 from .axes import apply_common_axes, ensure_datetime_index, prepare_xaxis_data
-from .export import (
-    open_in_browser,
-    round_and_align_dates as _round_and_align_dates_impl,
-    save_plot_image as _save_plot_image_impl,
-)
 from .layout import (
     add_watermark,
     apply_background_image,
@@ -34,40 +29,71 @@ def package_plot_asset(name: str):
     return package_asset(name)
 
 
-def generate_filename_from_title(title: str) -> str:
-    from .export import generate_filename_from_title as _generate_filename_from_title
-
-    return _generate_filename_from_title(title)
-
-
-def save_plot_image(
-    fig: go.Figure,
-    title: str,
-    save_path: Optional[str] = None,
-    static_formats: Optional[List[str]] = None,
-    static_scale: float = 2.0,
-) -> Tuple[bool, str]:
-    return _save_plot_image_impl(
-        fig=fig,
-        title=title,
-        save_path=save_path,
-        static_formats=static_formats,
-        static_scale=static_scale,
-    )
-
-
 def round_and_align_dates(
     df_list: List[pd.DataFrame],
     start_date=None,
     end_date=None,
     round_freq: str = "D",
 ) -> List[pd.DataFrame]:
-    return _round_and_align_dates_impl(
-        df_list=df_list,
-        start_date=start_date,
-        end_date=end_date,
-        round_freq=round_freq,
-    )
+    processed_dfs = []
+    min_start = pd.Timestamp.max
+    max_end = pd.Timestamp.min
+
+    for df_orig in df_list:
+        df = df_orig.copy()
+        if not pd.api.types.is_datetime64_any_dtype(df.index):
+            try:
+                df.index = pd.to_datetime(df.index)
+            except Exception as exc:
+                print(
+                    f"Warning: Could not convert index to datetime for a DataFrame: {exc}. Skipping alignment for it."
+                )
+                processed_dfs.append(df_orig)
+                continue
+
+        try:
+            df.index = df.index.round(round_freq)
+        except Exception as exc:
+            print(
+                f"Warning: Could not round index with frequency '{round_freq}': {exc}"
+            )
+
+        df = df[~df.index.duplicated(keep="first")]
+        df = df.sort_index()
+        if not df.empty:
+            min_start = min(min_start, df.index.min())
+            max_end = max(max_end, df.index.max())
+        processed_dfs.append(df)
+
+    final_start = pd.to_datetime(start_date) if start_date else min_start
+    final_end = pd.to_datetime(end_date) if end_date else max_end
+    if (
+        final_start > final_end
+        or final_start is pd.Timestamp.max
+        or final_end is pd.Timestamp.min
+    ):
+        print(
+            "Warning: Could not determine a valid common date range for alignment. Returning processed DataFrames."
+        )
+        return processed_dfs
+
+    try:
+        full_date_range = pd.date_range(
+            start=final_start, end=final_end, freq=round_freq
+        )
+    except Exception as exc:
+        print(
+            f"Warning: Could not create date range with frequency '{round_freq}': {exc}."
+        )
+        return processed_dfs
+
+    aligned_dfs = []
+    for df in processed_dfs:
+        if pd.api.types.is_datetime64_any_dtype(df.index) and not df.empty:
+            aligned_dfs.append(df.reindex(full_date_range))
+        else:
+            aligned_dfs.append(df)
+    return aligned_dfs
 
 
 class BWRPlots(
@@ -110,9 +136,6 @@ class BWRPlots(
     def _get_font_dict(self, font_type: str) -> Dict[str, Any]:
         return get_font_dict(self, font_type)
 
-    def _open_in_browser(self, fig: go.Figure) -> None:
-        open_in_browser(fig)
-
     def _ensure_datetime_index(
         self,
         data: pd.DataFrame | pd.Series | None,
@@ -141,7 +164,7 @@ class BWRPlots(
         source_y: Optional[float] = None,
         is_table: bool = False,
         plot_area_b_padding: Optional[int] = None,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         return apply_common_layout(
             self,
             fig=fig,

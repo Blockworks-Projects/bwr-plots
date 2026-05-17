@@ -48,7 +48,9 @@ def apply_common_layout(
         src_pos = cfg_pos["source"]
         canvas_w = cfg_pos["canvas_width"]
         canvas_h = cfg_pos["canvas_height"]
-        annot_x, annot_y = pixels_to_paper(src_pos["x_px"], src_pos["y_px"], canvas_w, canvas_h)
+        annot_x, annot_y = pixels_to_paper(
+            src_pos["x_px"], src_pos["y_px"], canvas_w, canvas_h
+        )
         annot_xanchor = src_pos["anchor_x"]
         annot_yanchor = src_pos["anchor_y"]
         if is_table:
@@ -63,8 +65,12 @@ def apply_common_layout(
             annot_xanchor = cfg_annot["table_xanchor"]
             annot_yanchor = cfg_annot["table_yanchor"]
         else:
-            annot_x = source_x if source_x is not None else cfg_annot["default_source_x"]
-            annot_y = source_y if source_y is not None else cfg_annot["default_source_y"]
+            annot_x = (
+                source_x if source_x is not None else cfg_annot["default_source_x"]
+            )
+            annot_y = (
+                source_y if source_y is not None else cfg_annot["default_source_y"]
+            )
             annot_xanchor = cfg_annot["xanchor"]
             annot_yanchor = cfg_annot["yanchor"]
 
@@ -79,7 +85,9 @@ def apply_common_layout(
         annotation_space_below = 0
         if (source or date) and annot_y < 0:
             annotation_space_below = abs(annot_y * height)
-        bottom_margin = max(cfg_layout["margin_b_min"], int(annotation_space_below) + 20)
+        bottom_margin = max(
+            cfg_layout["margin_b_min"], int(annotation_space_below) + 20
+        )
 
     top_margin = cfg_layout["margin_t_base"] + cfg_layout["title_padding"]
     total_height = height
@@ -90,7 +98,9 @@ def apply_common_layout(
             total_height = adjusted_plot_height + top_margin + bottom_margin
 
     subtitle_font = cfg_fonts["subtitle"]
-    subtitle_color = subtitle_font.get("color", cfg_fonts["subtitle"].get("color", "#adb0b5"))
+    subtitle_color = subtitle_font.get(
+        "color", cfg_fonts["subtitle"].get("color", "#adb0b5")
+    )
     subtitle_size = subtitle_font.get("size", 15)
 
     if "positioning" in plotter.config:
@@ -105,7 +115,12 @@ def apply_common_layout(
         template=cfg_general["template"],
         width=cfg_general["width"],
         height=total_height,
-        margin=dict(l=cfg_layout["margin_l"], r=cfg_layout["margin_r"], t=top_margin, b=bottom_margin),
+        margin=dict(
+            l=cfg_layout["margin_l"],
+            r=cfg_layout["margin_r"],
+            t=top_margin,
+            b=bottom_margin,
+        ),
         title_text=f"<b>{title}</b><br><sup><span style='color:{subtitle_color}; font-size:{subtitle_size}px'>{subtitle}</span></sup>",
         title_x=title_x_paper,
         title_font=get_font_dict(plotter, "title"),
@@ -136,7 +151,9 @@ def apply_common_layout(
     font_css_url = plotter.config.get("fonts", {}).get("css_url")
     font_primary = None
     if font_css_url:
-        font_primary = get_primary_font_family(plotter.config.get("fonts", {}).get("normal_family"))
+        font_primary = get_primary_font_family(
+            plotter.config.get("fonts", {}).get("normal_family")
+        )
     if font_css_url or font_primary:
         meta = fig.layout.meta if isinstance(fig.layout.meta, dict) else {}
         meta = dict(meta)
@@ -193,15 +210,21 @@ def add_watermark(
             canvas_w = cfg_pos["canvas_width"]
             canvas_h = cfg_pos["canvas_height"]
             x, y = pixels_to_paper(wm_pos["x_px"], wm_pos["y_px"], canvas_w, canvas_h)
-            sx, sy = pixels_to_paper_size(wm_pos["width_px"], wm_pos["height_px"], canvas_w, canvas_h)
+            sx, sy = pixels_to_paper_size(
+                wm_pos["width_px"], wm_pos["height_px"], canvas_w, canvas_h
+            )
             xanchor = wm_pos["anchor_x"]
             yanchor = wm_pos["anchor_y"]
 
             if plotter.watermark_aspect_ratio:
                 margin_l = fig.layout.margin.l or plotter.config["layout"]["margin_l"]
                 margin_r = fig.layout.margin.r or plotter.config["layout"]["margin_r"]
-                margin_t = fig.layout.margin.t or plotter.config["layout"]["margin_t_base"]
-                margin_b = fig.layout.margin.b or plotter.config["layout"]["margin_b_fixed"]
+                margin_t = (
+                    fig.layout.margin.t or plotter.config["layout"]["margin_t_base"]
+                )
+                margin_b = (
+                    fig.layout.margin.b or plotter.config["layout"]["margin_b_fixed"]
+                )
                 plot_w = canvas_w - margin_l - margin_r
                 plot_h = canvas_h - margin_t - margin_b
                 sy = (sx * plot_w) / (plotter.watermark_aspect_ratio * plot_h)
@@ -209,8 +232,12 @@ def add_watermark(
             if dynamic_left_margin is not None:
                 default_left_margin = plotter.config["layout"]["margin_l"]
                 default_right_margin = plotter.config["layout"]["margin_r"]
-                default_plot_width = canvas_w - default_left_margin - default_right_margin
-                actual_plot_width = canvas_w - dynamic_left_margin - default_right_margin
+                default_plot_width = (
+                    canvas_w - default_left_margin - default_right_margin
+                )
+                actual_plot_width = (
+                    canvas_w - dynamic_left_margin - default_right_margin
+                )
                 scale_factor = default_plot_width / actual_plot_width
                 sx = sx * scale_factor
                 sy = sy * scale_factor
@@ -236,7 +263,11 @@ def apply_background_image(
     plot_type_key: str,
     dynamic_left_margin: Optional[int] = None,
 ) -> None:
-    use_bg_image = plotter.config["plot_specific"].get(plot_type_key, {}).get("use_background_image", False)
+    use_bg_image = (
+        plotter.config["plot_specific"]
+        .get(plot_type_key, {})
+        .get("use_background_image", False)
+    )
     if use_bg_image and plotter.background_image_data:
         try:
             bg_x = -0.08
@@ -244,12 +275,15 @@ def apply_background_image(
             if plot_type_key == "horizontal_bar" and dynamic_left_margin is not None:
                 figure_width = plotter.config["general"]["width"]
                 default_right_margin = plotter.config["layout"]["margin_r"]
-                plot_area_width = figure_width - dynamic_left_margin - default_right_margin
+                plot_area_width = (
+                    figure_width - dynamic_left_margin - default_right_margin
+                )
                 bg_x = -dynamic_left_margin / plot_area_width
                 bg_sizex = figure_width / plot_area_width
 
             fig.add_layout_image(
                 source=plotter.background_image_data,
+                name="bwr_background",
                 xref="paper",
                 yref="paper",
                 x=bg_x,
@@ -260,6 +294,17 @@ def apply_background_image(
                 layer="below",
                 opacity=1.0,
             )
-            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            meta = fig.layout.meta if isinstance(fig.layout.meta, dict) else {}
+            meta = dict(meta)
+            meta["html_background_image_data"] = plotter.background_image_data
+            meta["html_background_color"] = plotter.config["colors"].get(
+                "background_color", "#1A1A1A"
+            )
+            fig.update_layout(meta=meta)
+            fig.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
+            )
         except Exception as exc:
-            print(f"Warning: Failed to apply background image for plot type '{plot_type_key}': {exc}")
+            print(
+                f"Warning: Failed to apply background image for plot type '{plot_type_key}': {exc}"
+            )

@@ -7,7 +7,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ....platform.export import save_plot_image
 from .service import _add_pie_traces
 
 
@@ -26,11 +25,6 @@ class PieChartMixin:
         show_legend: bool = True,
         use_watermark: Optional[bool] = None,
         plot_area_b_padding: Optional[int] = None,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -40,11 +34,11 @@ class PieChartMixin:
         cfg_wm = self.config["watermark"]
 
         plot_height = height if height is not None else cfg_gen["height"]
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
         current_show_values = (
-            show_values
-            if show_values is not None
-            else cfg_plot["default_show_values"]
+            show_values if show_values is not None else cfg_plot["default_show_values"]
         )
         current_text_position = (
             text_position
@@ -130,18 +124,25 @@ class PieChartMixin:
                     if self.watermark_aspect_ratio:
                         canvas_w = self.config["positioning"]["canvas_width"]
                         canvas_h = self.config["positioning"]["canvas_height"]
-                        margin_l = fig.layout.margin.l or self.config["layout"]["margin_l"]
-                        margin_r = fig.layout.margin.r or self.config["layout"]["margin_r"]
-                        margin_t = fig.layout.margin.t or self.config["layout"]["margin_t_base"]
+                        margin_l = (
+                            fig.layout.margin.l or self.config["layout"]["margin_l"]
+                        )
+                        margin_r = (
+                            fig.layout.margin.r or self.config["layout"]["margin_r"]
+                        )
+                        margin_t = (
+                            fig.layout.margin.t
+                            or self.config["layout"]["margin_t_base"]
+                        )
                         margin_b = (
                             fig.layout.margin.b
                             or self.config["layout"]["margin_b_fixed"]
                         )
                         plot_w = canvas_w - margin_l - margin_r
                         plot_h = canvas_h - margin_t - margin_b
-                        pie_sizey = (
-                            pie_sizex * plot_w
-                        ) / (self.watermark_aspect_ratio * plot_h)
+                        pie_sizey = (pie_sizex * plot_w) / (
+                            self.watermark_aspect_ratio * plot_h
+                        )
                     fig.add_layout_image(
                         source=self.watermark,
                         x=cfg_plot.get("watermark_x", 1.02),
@@ -158,16 +159,4 @@ class PieChartMixin:
             else:
                 self._add_watermark(fig)
 
-        if save_image:
-            success, message = save_plot_image(
-                fig,
-                title,
-                save_path,
-                static_formats,
-                static_scale,
-            )
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

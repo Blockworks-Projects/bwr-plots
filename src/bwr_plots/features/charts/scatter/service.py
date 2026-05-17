@@ -61,7 +61,9 @@ def _add_scatter_traces(
     if not trace_sources:
         return
 
-    ordered_names = apply_legend_order([name for _, name in trace_sources], legend_order)
+    ordered_names = apply_legend_order(
+        [name for _, name in trace_sources], legend_order
+    )
     color_map = build_series_color_map(
         ordered_names,
         color_palette,
@@ -177,8 +179,6 @@ def render_scatter(
         y_axis_title=spec.y_axis_title,
         auto_scale_y_values=spec.auto_scale_y_values,
         smoothing_window=spec.smoothing_window,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )
@@ -197,5 +197,7 @@ def render_scatter(
         fig=fig,
         chart_name=spec.kind,
         series_names=series_names,
-        xaxis_type="date" if spec.xaxis_is_date else getattr(fig.layout.xaxis, "type", None),
+        xaxis_type="date"
+        if spec.xaxis_is_date
+        else getattr(fig.layout.xaxis, "type", None),
     )

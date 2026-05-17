@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ....platform.axes import _get_scale_and_suffix, calculate_yaxis_grid_params
-from ....platform.export import save_plot_image
 from .service import _add_point_traces
 
 
@@ -45,11 +44,6 @@ class PointPlotMixin:
         trendline_type: str = "linear",
         trendline_color: Optional[str] = None,
         show_r_squared: bool = False,
-        save_image: bool = False,
-        save_path: Optional[str] = None,
-        static_formats: Optional[List[str]] = None,
-        static_scale: float = 2.0,
-        open_in_browser: bool = False,
         legend_order: Optional[List[str]] = None,
         series_colors: Optional[Dict[str, str]] = None,
     ) -> go.Figure:
@@ -71,13 +65,17 @@ class PointPlotMixin:
             print("Warning: No rows supplied to point plot.")
             return go.Figure()
 
-        if (x_column and x_column not in working_df.columns) or (y_column and y_column not in working_df.columns):
+        if (x_column and x_column not in working_df.columns) or (
+            y_column and y_column not in working_df.columns
+        ):
             working_df = working_df.reset_index()
 
         if y_column is None:
             numeric_cols = working_df.select_dtypes(include=np.number).columns.tolist()
             if not numeric_cols:
-                raise ValueError("Point plot requires at least one numeric column for y values.")
+                raise ValueError(
+                    "Point plot requires at least one numeric column for y values."
+                )
             y_column = numeric_cols[0]
 
         if y_column not in working_df.columns:
@@ -105,7 +103,9 @@ class PointPlotMixin:
         working_df = working_df[cols].dropna(subset=[x_column, y_column])
 
         if working_df.empty:
-            raise ValueError("Point plot has no valid rows after dropping NaNs in x/y columns.")
+            raise ValueError(
+                "Point plot has no valid rows after dropping NaNs in x/y columns."
+            )
 
         x_series = working_df[x_column]
         inferred_xaxis_is_date = False
@@ -145,7 +145,9 @@ class PointPlotMixin:
         if working_df.empty:
             raise ValueError("Point plot has no rows after processing x-axis values.")
 
-        effective_xaxis_is_date = xaxis_is_date if xaxis_is_date is not None else inferred_xaxis_is_date
+        effective_xaxis_is_date = (
+            xaxis_is_date if xaxis_is_date is not None else inferred_xaxis_is_date
+        )
 
         y_values = pd.to_numeric(working_df[y_column], errors="coerce")
         working_df[y_column] = y_values
@@ -161,7 +163,9 @@ class PointPlotMixin:
         yaxis_params = calculate_yaxis_grid_params(working_df[y_column].values)
 
         local_axis_options = {} if axis_options is None else axis_options.copy()
-        user_provided_range = axis_options.get("primary_range") if axis_options else None
+        user_provided_range = (
+            axis_options.get("primary_range") if axis_options else None
+        )
         if user_provided_range is None:
             local_axis_options["primary_range"] = yaxis_params["range"]
             local_axis_options["primary_tick0"] = yaxis_params["tick0"]
@@ -208,14 +212,24 @@ class PointPlotMixin:
 
         plot_height = height if height is not None else cfg_gen["height"]
         legend_y = cfg_leg["y"] if show_legend else 0
-        use_watermark_flag = use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        use_watermark_flag = (
+            use_watermark if use_watermark is not None else cfg_wm["default_use"]
+        )
 
         fig = make_subplots()
 
-        resolved_label_column = label_column if label_column and label_column in working_df.columns else None
-        resolved_size_column = size_column if size_column and size_column in working_df.columns else None
+        resolved_label_column = (
+            label_column
+            if label_column and label_column in working_df.columns
+            else None
+        )
+        resolved_size_column = (
+            size_column if size_column and size_column in working_df.columns else None
+        )
 
-        label_series = working_df[resolved_label_column] if resolved_label_column else None
+        label_series = (
+            working_df[resolved_label_column] if resolved_label_column else None
+        )
         size_series = working_df[resolved_size_column] if resolved_size_column else None
 
         _add_point_traces(
@@ -265,10 +279,4 @@ class PointPlotMixin:
         if use_watermark_flag:
             self._add_watermark(fig)
 
-        if save_image:
-            success, message = save_plot_image(fig, title, save_path, static_formats, static_scale)
-            if not success:
-                print(message)
-        if open_in_browser:
-            self._open_in_browser(fig)
         return fig

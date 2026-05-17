@@ -42,7 +42,9 @@ def _add_stacked_bar_traces(
 
     # Optionally sort columns by their sum values for palette assignment
     if sort_descending:
-        color_priority_cols = data[numeric_cols].sum().sort_values(ascending=False).index.tolist()
+        color_priority_cols = (
+            data[numeric_cols].sum().sort_values(ascending=False).index.tolist()
+        )
     else:
         color_priority_cols = list(numeric_cols)
 
@@ -61,7 +63,7 @@ def _add_stacked_bar_traces(
 
     # Add traces for each column in order
     for col in legend_sequence:
-        trace_color = color_map.get(col, palette[0] if palette else "#5637cd")
+        trace_color = color_map.get(col, palette[0] if palette else "#6633FF")
 
         fig.add_trace(
             go.Bar(
@@ -139,13 +141,13 @@ def render_stacked_bar(
         axis_options=spec.axis_options,
         xaxis_is_date=spec.xaxis_is_date,
         x_axis_title=spec.x_axis_title,
-        open_in_browser=False,
-        save_image=False,
         legend_order=spec.legend_order,
         series_colors=spec.series_colors,
     )
     return ChartArtifact(
         fig=fig,
         chart_name=spec.kind,
-        xaxis_type="date" if spec.xaxis_is_date else getattr(fig.layout.xaxis, "type", None),
+        xaxis_type="date"
+        if spec.xaxis_is_date
+        else getattr(fig.layout.xaxis, "type", None),
     )
