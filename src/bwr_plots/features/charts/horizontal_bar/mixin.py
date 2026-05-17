@@ -218,6 +218,7 @@ class HorizontalBarChartMixin:
             gridwidth=cfg_axes.get("gridwidth", 1),
             range=xaxis_params.get("range"),
             tickformat=xaxis_params.get("tickformat"),
+            hoverformat=cfg_axes.get("y_primary_hoverformat"),
             linecolor=cfg_axes["linecolor"],
             tickcolor="rgba(0,0,0,0)",
             ticks="",
